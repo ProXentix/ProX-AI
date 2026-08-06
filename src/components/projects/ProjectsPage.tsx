@@ -214,45 +214,46 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onClose, onStartChat
         /* PROJECTS LIST VIEW (SCREENSHOT 1 & 3) */
         <div>
           {/* Top Sticky Header */}
-          <div className="sticky top-0 z-10 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800 px-6 py-4">
-            <div className="w-full flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 shrink-0">
+          <div className="sticky top-0 z-10 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800 px-3 sm:px-6 py-3 sm:py-4">
+            <div className="w-full flex items-center justify-between gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={onClose}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/80 transition-all dark:text-zinc-300 dark:hover:text-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 shrink-0 shadow-2xs"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/80 transition-all dark:text-zinc-300 dark:hover:text-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 shrink-0 shadow-2xs"
                   title="Back to Chat"
                 >
                   <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span>Back</span>
+                  <span className="hidden sm:inline">Back</span>
                 </button>
               </div>
 
-              {/* Centered Title between Back button and Search controls */}
-              <div className="flex-1 flex justify-center items-center px-4">
-                <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 text-center truncate">
+              {/* Centered Title */}
+              <div className="flex-1 flex justify-center items-center px-1 sm:px-4">
+                <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 text-center truncate">
                   Projects
                 </h1>
               </div>
 
               {/* Search Input & New Button */}
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="relative w-44 sm:w-56">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <div className="relative w-28 sm:w-56">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400" />
                   <input
                     type="text"
-                    placeholder="Search projects..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 rounded-2xl text-xs bg-zinc-100/80 border border-zinc-200/60 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-zinc-900/80 dark:border-zinc-800 dark:text-zinc-100 shadow-2xs transition-all"
+                    className="w-full pl-8 sm:pl-9 pr-2.5 sm:pr-3.5 py-1.5 sm:py-2 rounded-2xl text-xs bg-zinc-100/80 border border-zinc-200/60 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-zinc-900/80 dark:border-zinc-800 dark:text-zinc-100 shadow-2xs transition-all"
                   />
                 </div>
 
                 <button
                   onClick={() => setCreateModalOpen(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all shadow-md active:scale-95 shrink-0"
+                  className="flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all shadow-md active:scale-95 shrink-0"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>New Project</span>
+                  <span className="hidden sm:inline">New Project</span>
+                  <span className="inline sm:hidden">New</span>
                 </button>
               </div>
             </div>

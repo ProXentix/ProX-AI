@@ -132,18 +132,15 @@ export const ChatArea: React.FC = () => {
     <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-white dark:bg-zinc-950">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800/70 shrink-0">
-        {/* Left: Sidebar toggle (only when sidebar closed) + Model Selector */}
-        <div className="flex items-center gap-2">
-          {!sidebarOpen && (
-            <Tooltip content="Expand Sidebar (Ctrl+/)" position="right">
-              <button
-                onClick={toggleSidebar}
-                className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200 shadow-xs transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800"
-              >
-                <PanelLeft className="w-4 h-4" />
-              </button>
-            </Tooltip>
-          )}
+        {/* Left: Sidebar toggle + Model Selector */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={toggleSidebar}
+            className={`${!sidebarOpen ? 'block' : 'block md:hidden'} p-2 rounded-xl text-zinc-500 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200 shadow-xs transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 shrink-0`}
+            title="Toggle Sidebar"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </button>
           <ModelSelector />
         </div>
         {/* Right: empty for now */}

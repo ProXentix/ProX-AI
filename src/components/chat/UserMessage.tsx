@@ -103,7 +103,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({ message }) => {
             </div>
 
             {/* Options Bar: Copy, Share, Edit */}
-            <div className="flex items-center justify-end gap-1 pt-1 opacity-0 group-hover:opacity-100 transition-opacity select-none">
+            <div className="flex items-center justify-end gap-1 pt-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity select-none">
               {/* Copy */}
               <Tooltip content="Copy prompt text" position="bottom">
                 <button

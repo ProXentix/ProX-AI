@@ -239,12 +239,12 @@ export const AgentsPage: React.FC<AgentsPageProps> = ({ onLaunchAgent, onClose }
   return (
     <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950 h-full select-none">
       {/* Top Sticky Header */}
-      <div className="sticky top-0 z-10 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800 px-6 py-4">
-        <div className="w-full flex items-center justify-between gap-4">
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="w-full flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Back Button */}
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/80 transition-all dark:text-zinc-300 dark:hover:text-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 shrink-0 shadow-2xs"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/80 transition-all dark:text-zinc-300 dark:hover:text-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 shrink-0 shadow-2xs"
             title="Back to Chat"
           >
             <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -252,35 +252,36 @@ export const AgentsPage: React.FC<AgentsPageProps> = ({ onLaunchAgent, onClose }
           </button>
 
           {/* Center: Title */}
-          <div className="text-center min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center justify-center gap-2 tracking-tight">
-              <Bot className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              AI Agent Hub
+          <div className="text-center min-w-0 flex-1 px-1">
+            <h1 className="text-lg sm:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center justify-center gap-1.5 sm:gap-2 tracking-tight truncate">
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span>AI Agent Hub</span>
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate">
+            <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate hidden xs:block">
               Autonomous AI Assistants tailored for Code, Research, DevOps & Strategy
             </p>
           </div>
 
           {/* Right: Search & Create Agent Button */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="relative w-36 sm:w-52">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="relative w-28 sm:w-52">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
               <input
                 type="text"
-                placeholder="Search agents..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs bg-zinc-100 border border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-blue-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder-zinc-500 shadow-2xs"
+                className="w-full pl-8 pr-2.5 sm:pr-3 py-1.5 rounded-xl text-xs bg-zinc-100 border border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-blue-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder-zinc-500 shadow-2xs"
               />
             </div>
 
             <button
               onClick={() => setCreateModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all shrink-0"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all shrink-0 active:scale-95"
             >
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">New Agent</span>
+              <span className="inline sm:hidden">New</span>
             </button>
           </div>
         </div>
