@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, SquarePen } from 'lucide-react';
 import { useChatStore } from '../../store/chatStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { UserMessage } from './UserMessage';
@@ -19,6 +19,7 @@ export const ChatArea: React.FC = () => {
     activeConversationId,
     activeModelId,
     webSearchEnabled,
+    createNewConversation,
     addMessage,
     updateMessageContent,
     updateMessage,
@@ -143,8 +144,18 @@ export const ChatArea: React.FC = () => {
           </button>
           <ModelSelector />
         </div>
-        {/* Right: empty for now */}
-        <div />
+        {/* Right: New Chat button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Tooltip content="New Chat (⌘N)" position="left">
+            <button
+              onClick={() => createNewConversation()}
+              className="p-2 rounded-xl text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/80 transition-colors shadow-2xs dark:text-zinc-400 dark:hover:text-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800"
+              title="New Chat"
+            >
+              <SquarePen className="w-4 h-4" />
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Scrollable Message Container */}
