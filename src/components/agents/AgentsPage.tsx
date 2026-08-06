@@ -306,20 +306,26 @@ export const AgentsPage: React.FC<AgentsPageProps> = ({ onLaunchAgent, onClose }
       {/* Main Grid View */}
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
         {/* Spotlight Banner */}
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-between gap-4 flex-wrap">
-          <div className="space-y-1 max-w-xl">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-bold tracking-wider uppercase backdrop-blur-md">
-              <Sparkles className="w-3 h-3" /> Autonomous Workflows
+        <div className="relative overflow-hidden p-6 rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950/80 to-zinc-950 border border-indigo-900/40 text-white shadow-xl flex items-center justify-between gap-6 flex-wrap group">
+          {/* Background Ambient Glows */}
+          <div className="absolute -top-12 -left-12 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none group-hover:bg-blue-600/30 transition-all duration-700" />
+          <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-600/30 transition-all duration-700" />
+
+          <div className="relative z-10 space-y-1.5 max-w-xl">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-bold tracking-wider uppercase backdrop-blur-md">
+              <Sparkles className="w-3 h-3 text-blue-400" /> Autonomous Workflows
             </span>
-            <h2 className="text-lg font-bold">Deploy Persona-Trained AI Agents</h2>
-            <p className="text-xs text-blue-100 leading-relaxed">
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text text-transparent">
+              Deploy Persona-Trained AI Agents
+            </h2>
+            <p className="text-xs text-zinc-400 leading-relaxed">
               Launch pre-configured specialized AI agents with tailored system instructions, tool capabilities, and CoT reasoning pipelines.
             </p>
           </div>
 
           <button
             onClick={() => setCreateModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-100 font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+            className="relative z-10 px-4.5 py-2.5 rounded-2xl bg-white text-zinc-950 hover:bg-blue-50 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4 text-blue-600" />
             <span>Create Custom Agent</span>
