@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Conversation, Message, ModelId, ProjectFolder, SavedPrompt, UserProfileData, SettingsTab } from '../types/chat';
+import { Conversation, Message, ModelId, ProjectFolder, SavedPrompt, UserProfileData, SettingsTab, AIAgent, ProjectItem } from '../types/chat';
 import { INITIAL_CONVERSATIONS } from '../services/mockResponses';
 import { INITIAL_SAVED_PROMPTS } from '../constants/models';
 
@@ -61,6 +61,11 @@ interface ChatState {
   activePersonaId: string;
   userProfile: UserProfileData;
   exploreOpen: boolean;
+  agentsPageOpen: boolean;
+  projectsOpen: boolean;
+  activeProjectId: string | null;
+  customAgents: AIAgent[];
+  projects: ProjectItem[];
 
   // Actions
   setActiveConversation: (id: string | null) => void;
@@ -87,11 +92,18 @@ interface ChatState {
   setActivePersonaId: (id: string) => void;
   updateUserProfile: (updates: Partial<UserProfileData>) => void;
   setExploreOpen: (open: boolean) => void;
+  setAgentsPageOpen: (open: boolean) => void;
+  setProjectsOpen: (open: boolean) => void;
+  setActiveProjectId: (id: string | null) => void;
 
   addSavedPrompt: (prompt: Omit<SavedPrompt, 'id' | 'createdAt'>) => void;
   deleteSavedPrompt: (id: string) => void;
   addFolder: (name: string, color?: string) => void;
   deleteFolder: (id: string) => void;
+  addCustomAgent: (agent: Omit<AIAgent, 'id'>) => void;
+  deleteCustomAgent: (id: string) => void;
+  addProject: (name: string, memoryOption?: string) => void;
+  deleteProject: (id: string) => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -118,12 +130,16 @@ export const useChatStore = create<ChatState>()(
       webSearchEnabled: false,
       activePersonaId: 'default',
       exploreOpen: false,
+      agentsPageOpen: false,
+      projectsOpen: false,
+      activeProjectId: null,
+      customAgents: [],
+      projects: [],
       userProfile: INITIAL_USER_PROFILE,
 
-      setActiveConversation: (id) => set({ activeConversationId: id }),
-      
-      setActiveModel: (modelId) => set({ activeModelId: modelId }),
+      setActiveConversation: (id) => set({ activeConversationId: id, exploreOpen: false, agentsPageOpen: false, projectsOpen: false }),
 
+      setActiveModel: (modelId) => set({ activeModelId: modelId }),
 
       createNewConversation: (folderId = null) => {
         const id = 'conv-' + Date.now();
@@ -142,6 +158,8 @@ export const useChatStore = create<ChatState>()(
         set((state) => ({
           conversations: [newConv, ...state.conversations],
           activeConversationId: id,
+          exploreOpen: false,
+          agentsPageOpen: false,
         }));
 
         return id;
@@ -260,7 +278,10 @@ export const useChatStore = create<ChatState>()(
       setProfileModalOpen: (open) => set({ settingsModalOpen: open, activeSettingsTab: 'profile' }),
       setSearchModalOpen: (open) => set({ searchModalOpen: open }),
       setSavedPromptsModalOpen: (open) => set({ savedPromptsModalOpen: open }),
-      setExploreOpen: (open) => set({ exploreOpen: open }),
+      setExploreOpen: (open) => set({ exploreOpen: open, agentsPageOpen: false, projectsOpen: false }),
+      setAgentsPageOpen: (open) => set({ agentsPageOpen: open, exploreOpen: false, projectsOpen: false }),
+      setProjectsOpen: (open) => set({ projectsOpen: open, exploreOpen: false, agentsPageOpen: false }),
+      setActiveProjectId: (id) => set({ activeProjectId: id }),
 
       setSearchQuery: (query) => set({ searchQuery: query }),
       toggleWebSearch: () => set((state) => ({ webSearchEnabled: !state.webSearchEnabled })),
@@ -300,6 +321,37 @@ export const useChatStore = create<ChatState>()(
             c.folderId === id ? { ...c, folderId: null } : c
           ),
         })),
+
+      addCustomAgent: (agentData) => {
+        const newAgent: AIAgent = {
+          ...agentData,
+          id: 'agent-' + Date.now(),
+          isCustom: true,
+        };
+        set((state) => ({ customAgents: [newAgent, ...state.customAgents] }));
+      },
+
+      deleteCustomAgent: (id) =>
+        set((state) => ({ customAgents: state.customAgents.filter((a) => a.id !== id) })),
+
+      addProject: (name, memoryOption = 'Default memory') => {
+        const newProject: ProjectItem = {
+          id: 'proj-' + Date.now(),
+          name,
+          createdAt: new Date().toISOString(),
+          updatedAt: 'Today',
+          memoryOption,
+          conversationsCount: 0,
+          sourcesCount: 0,
+        };
+        set((state) => ({ projects: [newProject, ...state.projects] }));
+      },
+
+      deleteProject: (id) =>
+        set((state) => ({
+          projects: state.projects.filter((p) => p.id !== id),
+          activeProjectId: state.activeProjectId === id ? null : state.activeProjectId,
+        })),
     }),
     {
       name: 'prox-ai-chat-store',
@@ -309,6 +361,8 @@ export const useChatStore = create<ChatState>()(
         activeModelId: state.activeModelId,
         folders: state.folders,
         savedPrompts: state.savedPrompts,
+        customAgents: state.customAgents,
+        projects: state.projects,
         webSearchEnabled: state.webSearchEnabled,
         activePersonaId: state.activePersonaId,
         userProfile: state.userProfile,

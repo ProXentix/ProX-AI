@@ -30,7 +30,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      theme: 'light', // Default to light minimal B&W theme
+      theme: 'dark', // Default to dark theme
       fontSize: 'base',
       showLineNumbers: true,
       enableWordWrap: true,

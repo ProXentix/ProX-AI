@@ -7,7 +7,6 @@ import {
   ThumbsDown,
   Volume2,
   VolumeX,
-  Pin,
   Download,
   GitBranch,
 } from 'lucide-react';
@@ -21,7 +20,6 @@ interface MessageToolbarProps {
   conversationId: string;
   content: string;
   rating?: 'like' | 'dislike' | null;
-  isPinned?: boolean;
   onRetry?: () => void;
 }
 
@@ -30,7 +28,6 @@ export const MessageToolbar: React.FC<MessageToolbarProps> = ({
   conversationId,
   content,
   rating,
-  isPinned,
   onRetry,
 }) => {
   const [copied, setCopied] = useState(false);
@@ -50,10 +47,6 @@ export const MessageToolbar: React.FC<MessageToolbarProps> = ({
   const handleRating = (nextRating: 'like' | 'dislike') => {
     const updated = rating === nextRating ? null : nextRating;
     updateMessage(conversationId, messageId, { rating: updated });
-  };
-
-  const handleTogglePin = () => {
-    updateMessage(conversationId, messageId, { isPinned: !isPinned });
   };
 
   const handleAudioSpeech = () => {
@@ -80,7 +73,7 @@ export const MessageToolbar: React.FC<MessageToolbarProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-1 mt-3 pt-2 border-t border-zinc-200 text-zinc-500 text-xs dark:border-zinc-800 dark:text-zinc-400">
+    <div className="flex items-center gap-1 pt-1 text-zinc-500 text-xs dark:text-zinc-400 select-none">
       <Tooltip content="Copy response">
         <button
           onClick={handleCopy}
@@ -131,17 +124,6 @@ export const MessageToolbar: React.FC<MessageToolbarProps> = ({
           }`}
         >
           <ThumbsDown className="w-3.5 h-3.5" />
-        </button>
-      </Tooltip>
-
-      <Tooltip content={isPinned ? 'Unpin message' : 'Pin message'}>
-        <button
-          onClick={handleTogglePin}
-          className={`p-1.5 rounded-lg transition-colors ${
-            isPinned ? 'text-zinc-950 bg-zinc-200 font-bold dark:text-zinc-100 dark:bg-zinc-800' : 'hover:text-zinc-900 hover:bg-zinc-200/60 dark:hover:text-zinc-100 dark:hover:bg-zinc-800'
-          }`}
-        >
-          <Pin className="w-3.5 h-3.5" />
         </button>
       </Tooltip>
 

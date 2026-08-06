@@ -29,10 +29,12 @@ export const Sidebar: React.FC = () => {
     setSavedPromptsModalOpen,
     setSettingsModalOpen,
     setExploreOpen,
+    setAgentsPageOpen,
+    setProjectsOpen,
     folders,
     addFolder,
   } = useChatStore();
-
+  
   const [showProjects, setShowProjects] = useState(false);
   const [createFolderModalOpen, setCreateFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -132,7 +134,7 @@ export const Sidebar: React.FC = () => {
               <div className="space-y-0.5">
                 <div className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-zinc-200/60 transition-colors dark:hover:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300">
                   <button
-                    onClick={() => setShowProjects(!showProjects)}
+                    onClick={() => setProjectsOpen(true)}
                     className="flex items-center gap-2.5 flex-1"
                   >
                     <Folder className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
@@ -173,7 +175,7 @@ export const Sidebar: React.FC = () => {
 
               {/* Custom Agents Option */}
               <button
-                onClick={() => setSettingsModalOpen(true, 'general')}
+                onClick={() => setAgentsPageOpen(true)}
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-700 hover:bg-zinc-200/60 transition-colors dark:text-zinc-300 dark:hover:bg-zinc-800/70"
               >
                 <Bot className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />

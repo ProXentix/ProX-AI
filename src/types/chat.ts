@@ -80,6 +80,18 @@ export interface ProjectFolder {
   createdAt: string;
 }
 
+export interface ProjectItem {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  shared?: boolean;
+  memoryOption?: string;
+  conversationsCount?: number;
+  sourcesCount?: number;
+}
+
 export interface Conversation {
   id: string;
   title: string;
@@ -144,6 +156,24 @@ export interface UserProfileData {
 }
 
 
+export interface AIAgent {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  systemPrompt: string;
+  category: 'Development' | 'Data & Research' | 'Writing & Content' | 'Security & DevOps' | 'Design & Strategy' | 'Custom';
+  avatar: string;
+  modelId: ModelId;
+  capabilities: string[];
+  gradient: string;
+  bg: string;
+  border: string;
+  isPopular?: boolean;
+  isCustom?: boolean;
+  starterPrompts: string[];
+}
+
 export type SettingsTab =
   | 'profile'
   | 'instructions'
@@ -154,6 +184,7 @@ export type SettingsTab =
   | 'appearance'
   | 'ai'
   | 'shortcuts';
+
 
 
 

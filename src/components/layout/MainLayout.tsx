@@ -1,34 +1,63 @@
 import React, { useEffect } from 'react';
 import { Sidebar } from '../sidebar/Sidebar';
-import { Header } from './Header';
 import { ChatArea } from '../chat/ChatArea';
 import { PinnedDrawer } from '../chat/PinnedDrawer';
 import { SearchModal } from '../common/SearchModal';
 import { SettingsModal } from '../common/SettingsModal';
 import { SavedPromptsModal } from '../sidebar/SavedPromptsModal';
 import { ExplorePage } from '../explore/ExplorePage';
+import { AgentsPage } from '../agents/AgentsPage';
+import { ProjectsPage } from '../projects/ProjectsPage';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useChatStore } from '../../store/chatStore';
+import { AIAgent } from '../../types/chat';
 
 export const MainLayout: React.FC = () => {
   useKeyboardShortcuts();
   const { theme } = useSettingsStore();
-  const { exploreOpen, setExploreOpen, createNewConversation, setActiveConversation } = useChatStore();
+  const {
+    exploreOpen,
+    setExploreOpen,
+    agentsPageOpen,
+    setAgentsPageOpen,
+    projectsOpen,
+    setProjectsOpen,
+    createNewConversation,
+    setActiveConversation,
+    setActiveModel,
+  } = useChatStore();
 
   // Sync dark class on document root
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else if (theme === 'light') {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    } else {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (systemDark) root.classList.add('dark');
-      else root.classList.remove('dark');
+
+    const applyTheme = () => {
+      if (theme === 'dark') {
+        root.classList.add('dark');
+        root.classList.remove('light');
+      } else if (theme === 'light') {
+        root.classList.add('light');
+        root.classList.remove('dark');
+      } else {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (systemDark) {
+          root.classList.add('dark');
+          root.classList.remove('light');
+        } else {
+          root.classList.add('light');
+          root.classList.remove('dark');
+        }
+      }
+    };
+
+    applyTheme();
+
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyTheme();
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
     }
   }, [theme]);
 
@@ -42,8 +71,31 @@ export const MainLayout: React.FC = () => {
     }, 100);
   };
 
+  const handleLaunchAgent = (agent: AIAgent, promptText?: string) => {
+    const id = createNewConversation();
+    setActiveConversation(id);
+    setActiveModel(agent.modelId);
+    setAgentsPageOpen(false);
+    if (promptText) {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('prox:send-prompt', { detail: { text: promptText } }));
+      }, 100);
+    }
+  };
+
+  const handleStartChatInProject = (projectId: string, initialPrompt?: string) => {
+    const id = createNewConversation(projectId);
+    setActiveConversation(id);
+    setProjectsOpen(false);
+    if (initialPrompt) {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('prox:send-prompt', { detail: { text: initialPrompt } }));
+      }, 100);
+    }
+  };
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0d1117] text-slate-100 font-sans antialiased">
+    <div className="flex h-screen w-screen overflow-hidden bg-white text-zinc-900 dark:bg-[#0d1117] dark:text-slate-100 font-sans antialiased transition-colors duration-200">
       {/* Collapsible Left Navigation Sidebar */}
       <Sidebar />
 
@@ -53,6 +105,16 @@ export const MainLayout: React.FC = () => {
           <ExplorePage
             onSelectPrompt={handleExplorePrompt}
             onClose={() => setExploreOpen(false)}
+          />
+        ) : agentsPageOpen ? (
+          <AgentsPage
+            onLaunchAgent={handleLaunchAgent}
+            onClose={() => setAgentsPageOpen(false)}
+          />
+        ) : projectsOpen ? (
+          <ProjectsPage
+            onStartChatInProject={handleStartChatInProject}
+            onClose={() => setProjectsOpen(false)}
           />
         ) : (
           <ChatArea />

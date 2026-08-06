@@ -40,6 +40,20 @@ export const ChatArea: React.FC = () => {
     }
   }, [messages.length, messages[messages.length - 1]?.content, autoScrollEnabled]);
 
+  // Listen for prompt send event (e.g. from Explore Page)
+  useEffect(() => {
+    const handleSendPromptEvent = (e: Event) => {
+      const customEv = e as CustomEvent<{ text: string }>;
+      if (customEv.detail?.text) {
+        handleSendMessage(customEv.detail.text, []);
+      }
+    };
+    window.addEventListener('prox:send-prompt', handleSendPromptEvent);
+    return () => {
+      window.removeEventListener('prox:send-prompt', handleSendPromptEvent);
+    };
+  }, [activeConversationId]);
+
   const handleSendMessage = async (text: string, attachments: Attachment[]) => {
     if (!activeConversationId) return;
 

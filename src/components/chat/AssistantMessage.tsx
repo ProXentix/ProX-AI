@@ -59,19 +59,18 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = ({ message, onR
           {message.isStreaming && (
             <span className="inline-block w-2 h-4 ml-1 bg-zinc-900 animate-pulse rounded-xs align-middle dark:bg-zinc-100" />
           )}
-
-          {/* Toolbar Actions */}
-          {!message.isStreaming && (
-            <MessageToolbar
-              messageId={message.id}
-              conversationId={message.conversationId}
-              content={message.content}
-              rating={message.rating}
-              isPinned={message.isPinned}
-              onRetry={onRetry}
-            />
-          )}
         </div>
+
+        {/* Toolbar Actions (Outside Card Frame) */}
+        {!message.isStreaming && (
+          <MessageToolbar
+            messageId={message.id}
+            conversationId={message.conversationId}
+            content={message.content}
+            rating={message.rating}
+            onRetry={onRetry}
+          />
+        )}
       </div>
     </div>
   );

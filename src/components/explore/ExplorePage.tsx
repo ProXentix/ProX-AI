@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Sparkles, TrendingUp, Star, Clock, Zap, Users,
-  ArrowRight, Flame, BookOpen, Cpu, BrainCircuit,
-  Code2, PenTool, Globe, Search, X
+  ArrowRight, ArrowLeft, Flame, BookOpen, Cpu, BrainCircuit,
+  Code2, PenTool, Globe, Search
 } from 'lucide-react';
 
 interface ExplorePageProps {
@@ -48,12 +48,48 @@ const FEATURED_PROMPTS = [
 ];
 
 const TRENDING_PROMPTS = [
-  { title: 'React 19 Migration Guide', category: '💻 Code', uses: '12.4k', icon: <Code2 className="w-3.5 h-3.5" /> },
-  { title: 'LLM Fine-tuning Walkthrough', category: '🧠 Think', uses: '9.8k', icon: <BrainCircuit className="w-3.5 h-3.5" /> },
-  { title: 'Landing Page Copy Generator', category: '🎨 Design', uses: '8.3k', icon: <PenTool className="w-3.5 h-3.5" /> },
-  { title: 'SQL Query Optimizer', category: '💻 Code', uses: '7.1k', icon: <Code2 className="w-3.5 h-3.5" /> },
-  { title: 'Market Research Report', category: '🌍 Search', uses: '6.9k', icon: <Globe className="w-3.5 h-3.5" /> },
-  { title: 'API Documentation Writer', category: '⚡ Build', uses: '5.2k', icon: <Zap className="w-3.5 h-3.5" /> },
+  {
+    title: 'React 19 Migration Guide',
+    prompt: 'Provide a complete step-by-step React 19 migration guide covering useActionState, useOptimistic, server components, and ref breaking changes.',
+    category: '💻 Code',
+    uses: '12.4k',
+    icon: <Code2 className="w-3.5 h-3.5" />
+  },
+  {
+    title: 'LLM Fine-tuning Walkthrough',
+    prompt: 'Write a comprehensive guide on fine-tuning an open-weight LLM using LLaMA-Factory / QLoRA with PyTorch and Hugging Face.',
+    category: '🧠 Think',
+    uses: '9.8k',
+    icon: <BrainCircuit className="w-3.5 h-3.5" />
+  },
+  {
+    title: 'Landing Page Copy Generator',
+    prompt: 'Generate compelling, high-converting SaaS landing page copy for an AI developer tool, including hero headline, subhead, features grid, and FAQ section.',
+    category: '🎨 Design',
+    uses: '8.3k',
+    icon: <PenTool className="w-3.5 h-3.5" />
+  },
+  {
+    title: 'SQL Query Optimizer',
+    prompt: 'Act as a Senior Database Administrator. Analyze and optimize the following SQL query for PostgreSQL performance, indexing, and execution plan:\n\nSELECT * FROM orders WHERE status = "pending"...',
+    category: '💻 Code',
+    uses: '7.1k',
+    icon: <Code2 className="w-3.5 h-3.5" />
+  },
+  {
+    title: 'Market Research Report',
+    prompt: 'Conduct a thorough market research analysis on the current generative AI developer tooling landscape. Include key players, market size, growth drivers, and strategic recommendations.',
+    category: '🌍 Search',
+    uses: '6.9k',
+    icon: <Globe className="w-3.5 h-3.5" />
+  },
+  {
+    title: 'API Documentation Writer',
+    prompt: 'Generate clean OpenAPI 3.0 specs and Markdown developer documentation for a RESTful User Authentication & Auth Token API.',
+    category: '⚡ Build',
+    uses: '5.2k',
+    icon: <Zap className="w-3.5 h-3.5" />
+  },
 ];
 
 const OFFICIAL_TEMPLATES = [
@@ -129,45 +165,51 @@ export const ExplorePage: React.FC<ExplorePageProps> = ({ onSelectPrompt, onClos
   return (
     <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950 h-full">
       {/* Hero Header */}
-      <div className="sticky top-0 z-10 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-zinc-100 dark:border-zinc-800 px-6 py-4">
+        <div className="w-full flex items-center justify-between gap-4">
+          {/* Left: Back Button */}
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/80 transition-all dark:text-zinc-300 dark:hover:text-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 shrink-0 shadow-2xs"
+            title="Back to Chat"
+          >
+            <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="hidden sm:inline">Back</span>
+          </button>
+
+          {/* Center: Title & Subtitle */}
+          <div className="text-center min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center justify-center gap-2 tracking-tight">
+              <Sparkles className="w-5.5 h-5.5 text-blue-600 dark:text-blue-400" />
               Explore
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Featured prompts, templates & AI workflows</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate">
+              Featured prompts, templates & AI workflows
+            </p>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative flex-1 max-w-sm">
+          {/* Right: Search Bar */}
+          <div className="relative w-44 sm:w-64 shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
             <input
               type="text"
               placeholder="Search prompts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-zinc-100 border border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-blue-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder-zinc-500"
+              className="w-full pl-9 pr-3 py-2 rounded-xl text-xs bg-zinc-100 border border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-blue-500 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder-zinc-500 shadow-2xs"
             />
           </div>
-
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:text-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Filter Pills */}
-        <div className="max-w-5xl mx-auto flex items-center gap-2 mt-3 flex-wrap">
+        <div className="max-w-5xl mx-auto flex items-center justify-center gap-2 mt-4 flex-wrap">
           {filters.map((f) => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                 activeFilter === f
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
+                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-xs'
                   : 'bg-zinc-100 text-zinc-600 hover:text-zinc-900 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'
               }`}
             >
@@ -222,6 +264,7 @@ export const ExplorePage: React.FC<ExplorePageProps> = ({ onSelectPrompt, onClos
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.04 }}
+                onClick={() => { onSelectPrompt(p.prompt); onClose(); }}
                 className="group flex items-center gap-3 p-3 rounded-xl text-left bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 dark:bg-zinc-900/60 dark:border-zinc-800 dark:hover:bg-zinc-800/80 transition-all"
               >
                 <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 shrink-0">
@@ -285,22 +328,22 @@ export const ExplorePage: React.FC<ExplorePageProps> = ({ onSelectPrompt, onClos
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.06 }}
                 onClick={() => { onSelectPrompt(w.prompt); onClose(); }}
-                className="group p-4 rounded-2xl text-left bg-zinc-950 dark:bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                className="group p-4 rounded-2xl text-left bg-zinc-50 border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 shadow-2xs hover:shadow-md transition-all hover:-translate-y-0.5"
               >
                 <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${w.color} text-white text-[10px] font-bold mb-3`}>
                   <Zap className="w-3 h-3" />
                   Workflow
                 </div>
-                <h3 className="text-sm font-bold text-zinc-100 mb-3">{w.title}</h3>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-3">{w.title}</h3>
                 <div className="space-y-1.5">
                   {w.steps.map((step, si) => (
                     <div key={si} className="flex items-center gap-2">
-                      <span className="w-4 h-4 rounded-full bg-zinc-800 text-zinc-400 text-[10px] font-bold flex items-center justify-center shrink-0">{si + 1}</span>
-                      <span className="text-[11px] text-zinc-400">{step}</span>
+                      <span className="w-4 h-4 rounded-full bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 text-[10px] font-bold flex items-center justify-center shrink-0">{si + 1}</span>
+                      <span className="text-[11px] text-zinc-600 dark:text-zinc-400">{step}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center gap-1 mt-4 text-xs text-zinc-500 group-hover:text-blue-400 transition-colors font-medium">
+                <div className="flex items-center gap-1 mt-4 text-xs text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors font-medium">
                   Run workflow <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </motion.button>
