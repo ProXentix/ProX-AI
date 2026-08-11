@@ -1,24 +1,26 @@
-# Logs
-logs
+# Python / Environment
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+scratch/
+
+# Node / Web Frontend
+node_modules/
+dist/
+dist-ssr/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Checkpoint outputs (large binary weights)
+# Keep tokenizer weights, but ignore large model run weights if necessary
+weights/neurix_100m_dry_run/
+weights/neurix_100m_resume_test/
+*.pt
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# IDE / OS
+.vscode/
+.idea/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Conversation, Message, ModelId, ProjectFolder, SavedPrompt, UserProfileData, SettingsTab, AIAgent, ProjectItem } from '../types/chat';
+import { Conversation, Message, ModelId, ModelInfo, ProjectFolder, SavedPrompt, UserProfileData, SettingsTab, AIAgent, ProjectItem } from '../types/chat';
 import { INITIAL_CONVERSATIONS } from '../services/mockResponses';
 import { INITIAL_SAVED_PROMPTS } from '../constants/models';
 
@@ -45,6 +45,7 @@ interface ChatState {
   conversations: Conversation[];
   activeConversationId: string | null;
   activeModelId: ModelId;
+  availableModels: ModelInfo[];
   folders: ProjectFolder[];
   savedPrompts: SavedPrompt[];
   searchQuery: string;
@@ -68,6 +69,7 @@ interface ChatState {
   projects: ProjectItem[];
 
   // Actions
+  fetchModels: () => Promise<void>;
   setActiveConversation: (id: string | null) => void;
   setActiveModel: (modelId: ModelId) => void;
   createNewConversation: (folderId?: string | null) => string;
@@ -112,6 +114,7 @@ export const useChatStore = create<ChatState>()(
       conversations: INITIAL_CONVERSATIONS,
       activeConversationId: 'conv-react-19',
       activeModelId: 'neurix',
+      availableModels: [],
       folders: [
         { id: 'folder-tech', name: 'Engineering & Tech', color: '#10A37F', createdAt: '2026-08-01' },
         { id: 'folder-research', name: 'Deep Research', color: '#3B82F6', createdAt: '2026-08-02' },
@@ -136,6 +139,38 @@ export const useChatStore = create<ChatState>()(
       customAgents: [],
       projects: [],
       userProfile: INITIAL_USER_PROFILE,
+
+      fetchModels: async () => {
+        try {
+          const res = await fetch('http://localhost:3001/v1/models');
+          if (res.ok) {
+            const json = await res.json();
+            const fetchedModels = json.data.map((m: any) => ({
+              id: m.id as ModelId,
+              name: m.name,
+              provider: m.provider || 'ProX AI',
+              description: m.description || `${m.name} (${m.badge || 'Available'})`,
+              badge: m.badge || 'Available',
+              icon: m.icon || (m.id === 'neurix' ? 'Sparkles' : m.id === 'logix' ? 'BrainCircuit' : 'Cpu'),
+              capabilities: {
+                vision: typeof m.capabilities === 'object' ? Boolean(m.capabilities.vision) : false,
+                webSearch: typeof m.capabilities === 'object' ? Boolean(m.capabilities.webSearch) : true,
+                codeExecution: typeof m.capabilities === 'object' ? Boolean(m.capabilities.codeExecution) : true,
+                reasoning: typeof m.capabilities === 'object' ? Boolean(m.capabilities.reasoning) : true,
+                contextWindow: typeof m.capabilities === 'object' ? m.capabilities.contextWindow || '128k' : '128k',
+              },
+            }));
+            set({ availableModels: fetchedModels });
+            
+            const activeId = get().activeModelId;
+            if (!fetchedModels.find((m: any) => m.id === activeId) && fetchedModels.length > 0) {
+              set({ activeModelId: fetchedModels[0].id });
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch models from Gateway', e);
+        }
+      },
 
       setActiveConversation: (id) => set({ activeConversationId: id, exploreOpen: false, agentsPageOpen: false, projectsOpen: false }),
 

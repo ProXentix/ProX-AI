@@ -19,7 +19,6 @@ export async function generateStreamResponse(
   try {
     const isReasoningModel = modelId === 'logix' || modelId === 'neurix';
 
-    // 1. Simulate Reasoning / Thinking process if applicable
     if (isReasoningModel) {
       callbacks.onReasoningStart?.();
       await delay(400);
@@ -27,61 +26,76 @@ export async function generateStreamResponse(
       const steps: ReasoningStep[] = [
         {
           id: 'step-1',
-          title: 'Parsing query intent & context window',
-          content: `Extracting semantic tokens from prompt "${prompt.slice(0, 40)}..."`,
-        },
-        {
-          id: 'step-2',
-          title: 'Generating architectural solution & code blocks',
-          content: 'Optimizing syntactic structure, checking TypeScript types, and styling via Tailwind CSS.',
-        },
+          title: 'Connecting to ProX AI Gateway',
+          content: `Routing request to model: ${modelId}...`,
+        }
       ];
 
       for (const step of steps) {
         if (signal?.aborted) return;
         callbacks.onReasoningStep?.(step);
-        await delay(500);
+        await delay(300);
       }
     }
 
-    // 2. Simulate Web Citations if Web Search is enabled
-    if (webSearchEnabled) {
-      const citations: Citation[] = [
-        {
-          id: 'cit-1',
-          title: 'Official Documentation & Standards 2026',
-          url: 'https://docs.prox.ai/specifications',
-          snippet: 'Comprehensive specification for modern AI web interfaces and high-performance streaming architectures.',
-          domain: 'docs.prox.ai',
-        },
-        {
-          id: 'cit-2',
-          title: 'High-Performance Web Design Benchmarks',
-          url: 'https://developer.mozilla.org/en-US/docs/Web/Performance',
-          snippet: 'Optimizing web application rendering speed, animation frame rates, and memory footprint.',
-          domain: 'developer.mozilla.org',
-        },
-      ];
-      callbacks.onCitations?.(citations);
-      await delay(400);
+    const response = await fetch('http://localhost:3001/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: [{ role: 'user', content: prompt }],
+        stream: true
+      }),
+      signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gateway returned status: ${response.status}`);
     }
 
-    // 3. Select Response Template based on prompt keywords
-    const responseText = getResponseContentForPrompt(prompt, modelId);
-    
-    // 4. Stream tokens chunks with slight jitter for natural typing feel
-    const words = responseText.split(' ');
-    for (let i = 0; i < words.length; i++) {
-      if (signal?.aborted) return;
-      const word = words[i] + (i === words.length - 1 ? '' : ' ');
-      callbacks.onToken(word);
-      await delay(Math.floor(Math.random() * 20) + 15);
+    if (!response.body) {
+      throw new Error('ReadableStream not supported in this browser.');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const dataStr = line.replace('data: ', '').trim();
+          if (dataStr === '[DONE]') {
+            continue;
+          }
+          if (dataStr) {
+            try {
+              const chunk = JSON.parse(dataStr);
+              const content = chunk.choices?.[0]?.delta?.content;
+              if (content) {
+                callbacks.onToken(content);
+              }
+            } catch (e) {
+              console.error('Error parsing SSE chunk', e);
+            }
+          }
+        }
+      }
     }
 
     callbacks.onComplete();
-  } catch (err) {
+  } catch (err: any) {
     if (!signal?.aborted) {
-      callbacks.onError?.('An error occurred while generating the response.');
+      callbacks.onError?.(err.message || 'An error occurred while generating the response.');
     }
   }
 }

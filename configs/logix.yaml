@@ -1,0 +1,24 @@
+model:
+  name: logix
+  vocab_size: 32000
+  d_model: 768
+  n_layers: 12
+  n_heads: 12
+  d_ff: 1720
+  max_seq_len: 2048
+  tie_weights: true
+
+training:
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 2.0e-4
+  weight_decay: 0.1
+  warmup_steps: 200
+  max_steps: 5000
+  gradient_clip: 1.0
+  precision: auto
+  seed: 42
+
+checkpoint:
+  save_every: 500
+  output_dir: ./weights/logix

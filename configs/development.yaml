@@ -1,0 +1,24 @@
+model:
+  name: neurix-tiny
+  vocab_size: 1000
+  d_model: 64
+  n_layers: 2
+  n_heads: 2
+  d_ff: 128
+  max_seq_len: 128
+  tie_weights: true
+
+training:
+  batch_size: 2
+  gradient_accumulation_steps: 1
+  learning_rate: 1.0e-3
+  weight_decay: 0.01
+  warmup_steps: 10
+  max_steps: 100
+  gradient_clip: 1.0
+  precision: float32
+  seed: 42
+
+checkpoint:
+  save_every: 50
+  output_dir: ./weights/neurix_tiny
