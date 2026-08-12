@@ -46,6 +46,7 @@ def load_approved_proxpl_corpus(tokenizer: ProXTokenizer) -> List[Dict[str, Any]
                             f_code = obj.get("fixed_code", "")
                             doc_text = f"# ProXPL Diagnostic Repair Pair\n\n## Broken Code\n```proxpl\n{b_code}\n```\n\n## Compiler Diagnostic\n{err}\n\n## Corrected Code\n```proxpl\n{f_code}\n```"
                             
+                            rec_type = obj.get("record_type", "compiler_generated_diagnostics")
                             records.append({
                                 "text": doc_text,
                                 "category": "proxpl",
@@ -55,8 +56,10 @@ def load_approved_proxpl_corpus(tokenizer: ProXTokenizer) -> List[Dict[str, Any]
                                 "title": f"Diagnostic Repair Pair {idx}",
                                 "license": "Apache-2.0 Open Source Specification",
                                 "permission_basis": "Project Official Approved Pre-Training Material",
+                                "provenance": "Official ProXPL Compiler Test Fixture",
+                                "record_type": rec_type,
                                 "version": "v0.1",
-                                "source_url": "https://prox.ai/docs/proxpl/diagnostics",
+                                "source_url": "https://github.com/ProgrammerKR/ProXPL",
                                 "source_id": f"proxpl_approved_diag_{idx}",
                                 "quality": "official_compiler_diagnostic_pair",
                                 "approved_for_training": True,
@@ -79,6 +82,7 @@ def load_approved_proxpl_corpus(tokenizer: ProXTokenizer) -> List[Dict[str, Any]
                     
                     title = sec_text.split("\n")[0].replace("#", "").strip() if sec_text.startswith("#") else file
                     
+                    rec_type = "official_human_written" if any(k in file for k in ["spec", "grammar", "docs", "stdlib"]) else "verified_source_examples"
                     record = {
                         "text": sec_text.strip(),
                         "category": "proxpl",
@@ -88,8 +92,10 @@ def load_approved_proxpl_corpus(tokenizer: ProXTokenizer) -> List[Dict[str, Any]
                         "title": title,
                         "license": "Apache-2.0 Open Source Specification",
                         "permission_basis": "Project Official Approved Pre-Training Material",
+                        "provenance": "Official ProXPL Language Repository",
+                        "record_type": rec_type,
                         "version": "v0.1",
-                        "source_url": "https://prox.ai/docs/proxpl",
+                        "source_url": "https://github.com/ProgrammerKR/ProXPL",
                         "source_id": f"proxpl_approved_{file}_{s_idx}_{idx}",
                         "quality": "official_approved_language_material",
                         "approved_for_training": True,

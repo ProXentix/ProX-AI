@@ -37,17 +37,34 @@ class ShardedCorpusWriter:
         else:
             self.extension = ".jsonl"
 
+        self.shard_index = self._detect_next_shard_index()
+        self.current_record_count = 0
+        self.total_records_written = 0
+        self.current_file = None
+        self._raw_file = None
+
+    def _detect_next_shard_index(self) -> int:
+        highest = -1
+        if os.path.exists(self.output_dir):
+            for fname in os.listdir(self.output_dir):
+                if fname.startswith(f"{self.prefix}-") and (".jsonl" in fname):
+                    parts = fname[len(self.prefix) + 1:].split(".")
+                    if parts and parts[0].isdigit():
+                        idx = int(parts[0])
+                        if idx > highest:
+                            highest = idx
+        return highest + 1
+
     def _open_next_shard(self):
-        if self.current_file is not None:
-            self.current_file.close()
+        self.close()
 
         filename = f"{self.prefix}-{self.shard_index:05d}{self.extension}"
         filepath = os.path.join(self.output_dir, filename)
 
         if self.extension == ".jsonl.zst" and HAS_ZSTD:
             cctx = zstd.ZstdCompressor(level=3)
-            raw_f = open(filepath, "wb")
-            self.current_file = cctx.stream_writer(raw_f)
+            self._raw_file = open(filepath, "wb")
+            self.current_file = cctx.stream_writer(self._raw_file)
         elif self.extension == ".jsonl.gz":
             self.current_file = gzip.open(filepath, "wt", encoding="utf-8")
         else:
@@ -71,5 +88,14 @@ class ShardedCorpusWriter:
 
     def close(self):
         if self.current_file is not None:
-            self.current_file.close()
+            try:
+                self.current_file.close()
+            except Exception:
+                pass
             self.current_file = None
+        if self._raw_file is not None:
+            try:
+                self._raw_file.close()
+            except Exception:
+                pass
+            self._raw_file = None

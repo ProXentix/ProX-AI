@@ -98,7 +98,7 @@ def test_zero_repository_contamination():
     clean_records = [
         {
             "source_id": "proxpl_approved_spec.md_0",
-            "source_url": "https://prox.ai/docs/proxpl",
+            "source_url": "https://github.com/ProgrammerKR/ProXPL",
             "text": "fn main() {}"
         }
     ]

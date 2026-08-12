@@ -52,11 +52,14 @@ class RobustNetworkStreamer:
         backoff = self.initial_backoff
         
         while retries <= self.max_retries:
+            ds_iter = None
             try:
                 ds_iter = dataset_generator_builder()
                 for item in ds_iter:
                     yield item
                 # Completed successfully
+                return
+            except GeneratorExit:
                 return
             except (OSError, socket.error, TimeoutError, ConnectionResetError, Exception) as e:
                 err_str = str(e)
@@ -75,3 +78,10 @@ class RobustNetworkStreamer:
                 self.retry_stats["NETWORK_RETRY_SUCCESS"] += 1
                 time.sleep(backoff)
                 backoff *= 2.0
+            finally:
+                if ds_iter is not None:
+                    if hasattr(ds_iter, "close") and callable(ds_iter.close):
+                        try:
+                            ds_iter.close()
+                        except Exception:
+                            pass
