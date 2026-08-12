@@ -1,21 +1,23 @@
 {
   "sources_version": "v0.1",
-  "creation_timestamp": "2026-08-12T08:22:30.445602+00:00",
+  "creation_timestamp": "2026-08-12T08:30:32.890604+00:00",
   "total_sources": 5,
   "sources": [
     {
       "dataset_name": "FineWeb-Edu",
       "dataset_id": "HuggingFaceFW/fineweb-edu",
       "category": "general_natural_language",
+      "language": "en",
       "license": "ODC-By 1.0 (Dataset) / Publisher Rights Preserved",
       "retrieved_records": 1003,
       "retrieved_tokens": 4508314,
       "status": "VERIFIED"
     },
     {
-      "dataset_name": "CodeParrot Clean",
+      "dataset_name": "CodeParrot Clean (Python Fallback)",
       "dataset_id": "codeparrot/codeparrot-clean-train",
       "category": "programming_languages",
+      "language": "python",
       "license": "Apache-2.0 Open Source",
       "retrieved_records": 423,
       "retrieved_tokens": 3003284,
@@ -25,24 +27,27 @@
       "dataset_name": "CodeXGlue Code-NL Search",
       "dataset_id": "google/code_x_glue_tc_nl_code_search_adv",
       "category": "technical_documentation",
+      "language": "en",
       "license": "Apache-2.0 / Open Technical Documentation",
       "retrieved_records": 706,
       "retrieved_tokens": 1000413,
       "status": "VERIFIED"
     },
     {
-      "dataset_name": "ProXPL Official Specification Corpus v0.1",
-      "dataset_id": "ProXPL Project Specification & Standard Library",
+      "dataset_name": "ProXPL Approved Corpus v0.1",
+      "dataset_id": "ProXPL Compiler Diagnostic Suite",
       "category": "proxpl",
+      "language": "proxpl",
       "license": "Apache-2.0 Open Source Specification",
-      "retrieved_records": 3,
-      "retrieved_tokens": 5008,
+      "retrieved_records": 10,
+      "retrieved_tokens": 10898,
       "status": "VERIFIED"
     },
     {
       "dataset_name": "OpenWebMath",
       "dataset_id": "open-web-math/open-web-math",
       "category": "mathematics_reasoning",
+      "language": "math",
       "license": "ODC-By 1.0 (Dataset) / Common Crawl Terms Preserved",
       "retrieved_records": 75,
       "retrieved_tokens": 502024,

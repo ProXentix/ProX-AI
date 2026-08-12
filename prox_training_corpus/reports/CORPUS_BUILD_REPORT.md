@@ -1,17 +1,18 @@
 # PROX TRAINING CORPUS v0.1 — Build Report
 
-**Date:** 2026-08-12 08:22 UTC  
+**Date:** 2026-08-12 08:30 UTC  
 **Corpus Version:** v0.1  
-**Corpus Hash (SHA-256):** `118b07b0da667cf79e9e6e9ab27c6bebb34e5887294c509f091e7af3372fc89e`  
+**Corpus Hash (SHA-256):** `5f99393ad3520e71c501e1eaa784641c9bb53a6b92c4f6064db5fceab2493600`  
 **Build Status:** **PASSED WITH WARNINGS**  
+**100M BUILD STATUS:** **NOT READY**  
 
 ---
 
 ## 1. Executive Summary & Status
 
 - **Target Tokens:** **10,000,000**
-- **Actual Usable Tokens:** **9,019,043**
-- **Train Tokens:** **8,117,138** | **Validation Tokens:** **901,905**
+- **Actual Usable Tokens:** **9,024,933**
+- **Train Tokens:** **8,122,439** | **Validation Tokens:** **902,494**
 - **Target Status:** PARTIAL BUILD (90.2% of target)
 - **Leakage Verification:** CLEAN (0% Leakage)
 
@@ -21,33 +22,46 @@
 
 | Category Key | Status | Document Count | Tokens | Target Tokens | Actual % | Target % |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `general_natural_language` | AVAILABLE | 1,003 | 4,508,314 | 4,500,000 | 49.99% | 45.0% |
-| `programming_languages` | AVAILABLE | 423 | 3,003,284 | 3,000,000 | 33.3% | 30.0% |
-| `technical_documentation` | AVAILABLE | 706 | 1,000,413 | 1,000,000 | 11.09% | 10.0% |
-| `proxpl` | AVAILABLE | 3 | 5,008 | 1,000,000 | 0.06% | 10.0% |
-| `mathematics_reasoning` | AVAILABLE | 75 | 502,024 | 500,000 | 5.57% | 5.0% |
+| `general_natural_language` | AVAILABLE | 1,003 | 4,508,314 | 4,500,000 | 49.95% | 45.0% |
+| `programming_languages` | AVAILABLE | 423 | 3,003,284 | 3,000,000 | 33.28% | 30.0% |
+| `technical_documentation` | AVAILABLE | 706 | 1,000,413 | 1,000,000 | 11.08% | 10.0% |
+| `proxpl` | AVAILABLE | 10 | 10,898 | 1,000,000 | 0.12% | 10.0% |
+| `mathematics_reasoning` | AVAILABLE | 75 | 502,024 | 500,000 | 5.56% | 5.0% |
 | `structured_technical_text` | NOT AVAILABLE | 0 | 0 | 0 | 0.0% | 0.0% |
 
 ---
 
-## 3. Language & Source Representation
+## 3. Programming Language Distribution
 
-- **Languages Represented:** en, python, proxpl, math
-- **Sources Ingested:** `FineWeb-Edu`, `The Stack Smol / CodeParrot`, `CodeXGlue / AG News`, `OpenWebMath`, `ProXPL Approved Corpus`.
-- **ProXPL Status:** 5,008 tokens ingested under strict zero repository contamination.
-- **Repository Isolation Verification:** **STRICTLY ZERO** (Verified 100% repository isolation).
+| Programming Language | Tokens Ingested | Target Share % | Status |
+| :--- | :--- | :--- | :--- |
+| `PYTHON` | 3,003,284 | 20.0% | VERIFIED |
+| `C` | 0 | 13.0% | SOURCE_UNAVAILABLE |
+| `CPP` | 0 | 13.0% | SOURCE_UNAVAILABLE |
+| `JS` | 0 | 10.0% | SOURCE_UNAVAILABLE |
+| `TS` | 0 | 10.0% | SOURCE_UNAVAILABLE |
+| `RUST` | 0 | 10.0% | SOURCE_UNAVAILABLE |
+| `GO` | 0 | 10.0% | SOURCE_UNAVAILABLE |
+| `JAVA` | 0 | 11.0% | SOURCE_UNAVAILABLE |
+| `EN` | 5,508,727 | 10.0% | VERIFIED |
+| `PROXPL` | 10,898 | 10.0% | VERIFIED |
+| `MATH` | 502,024 | 10.0% | VERIFIED |
 
 ---
 
-## 4. Quality & Deduplication Metrics
+## 4. Quality & Network Robustness Statistics
 
-- **Total Streamed Documents:** 2,291
-- **Accepted Clean Documents:** 2,210
+- **Total Streamed Documents:** 2,298
+- **Accepted Clean Documents:** 2,217
 - **Rejected Documents:** 81
-- **Exact SHA-256 Duplicates Filtered:** 2,210 unique payload checksums tracked.
+- **Network Retry Successes:** 0
+- **Network Retry Exhausted:** 0
 
 ---
 
-## 5. Final Assessment
+## 5. 100M Build Readiness Assessment
 
-**CORPUS BUILD STATUS:** **PASSED WITH WARNINGS**
+**100M BUILD STATUS:** **NOT READY**
+
+**Blocking Reasons:**
+- Token count (9,024,933) is below 95% of target (10,000,000)

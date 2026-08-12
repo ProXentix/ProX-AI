@@ -1,17 +1,19 @@
 {
   "corpus_version": "v0.1",
   "target_tokens": 10000000,
-  "actual_tokens": 9019043,
-  "train_tokens": 8117138,
-  "validation_tokens": 901905,
-  "creation_timestamp": "2026-08-12T08:22:30.448850+00:00",
-  "corpus_hash": "118b07b0da667cf79e9e6e9ab27c6bebb34e5887294c509f091e7af3372fc89e",
+  "actual_tokens": 9024933,
+  "train_tokens": 8122439,
+  "validation_tokens": 902494,
+  "build_status": "PASSED WITH WARNINGS",
+  "is_100m_ready": false,
+  "creation_timestamp": "2026-08-12T08:30:32.892157+00:00",
+  "corpus_hash": "5f99393ad3520e71c501e1eaa784641c9bb53a6b92c4f6064db5fceab2493600",
   "summary_statistics": {
-    "raw_streamed_document_count": 2291,
-    "accepted_document_count": 2210,
-    "total_usable_tokens": 9019043,
-    "train_tokens": 8117138,
-    "val_tokens": 901905,
+    "raw_streamed_document_count": 2298,
+    "accepted_document_count": 2217,
+    "total_usable_tokens": 9024933,
+    "train_tokens": 8122439,
+    "val_tokens": 902494,
     "target_phase_a_tokens": 10000000,
     "target_reached": false
   },
@@ -21,35 +23,35 @@
       "document_count": 1003,
       "tokens": 4508314,
       "target_tokens": 4500000,
-      "actual_percentage": 49.99
+      "actual_percentage": 49.95
     },
     "programming_languages": {
       "status": "AVAILABLE",
       "document_count": 423,
       "tokens": 3003284,
       "target_tokens": 3000000,
-      "actual_percentage": 33.3
+      "actual_percentage": 33.28
     },
     "technical_documentation": {
       "status": "AVAILABLE",
       "document_count": 706,
       "tokens": 1000413,
       "target_tokens": 1000000,
-      "actual_percentage": 11.09
+      "actual_percentage": 11.08
     },
     "proxpl": {
       "status": "AVAILABLE",
-      "document_count": 3,
-      "tokens": 5008,
+      "document_count": 10,
+      "tokens": 10898,
       "target_tokens": 1000000,
-      "actual_percentage": 0.06
+      "actual_percentage": 0.12
     },
     "mathematics_reasoning": {
       "status": "AVAILABLE",
       "document_count": 75,
       "tokens": 502024,
       "target_tokens": 500000,
-      "actual_percentage": 5.57
+      "actual_percentage": 5.56
     },
     "structured_technical_text": {
       "status": "NOT AVAILABLE",
@@ -59,20 +61,28 @@
       "actual_percentage": 0.0
     }
   },
-  "language_distribution": {
-    "en": 5508727,
+  "programming_language_breakdown": {
     "python": 3003284,
-    "proxpl": 5008,
+    "c": 0,
+    "cpp": 0,
+    "js": 0,
+    "ts": 0,
+    "rust": 0,
+    "go": 0,
+    "java": 0,
+    "en": 5508727,
+    "proxpl": 10898,
     "math": 502024
   },
-  "quality_filtering_statistics": {
-    "streamed_documents": 2291,
-    "accepted_documents": 2210,
-    "rejected_documents": 81
+  "network_retry_statistics": {
+    "NETWORK_RETRY_SUCCESS": 0,
+    "NETWORK_RETRY_EXHAUSTED": 0,
+    "SOURCE_FAILED": 0,
+    "SOURCE_FALLBACK_USED": 0
   },
   "leakage": {
     "train_document_count": 1000,
-    "val_document_count": 219,
+    "val_document_count": 220,
     "exact_leak_count": 0,
     "near_leak_count": 0,
     "total_leak_count": 0,
@@ -85,7 +95,7 @@
     "sha256": "ae03bfc8edfde3fab00b13a6cd65312a30bcf470ff9182fd7d405ad49103e0a1"
   },
   "build": {
-    "timestamp": "2026-08-12T08:22:30.448952+00:00",
+    "timestamp": "2026-08-12T08:30:32.892259+00:00",
     "pipeline_version": "v0.1",
     "configuration_hash": "f31dc4992e2e4209fb75d8a1f3f7f9cbafe6489198534f25cf264c33da55a540"
   }
