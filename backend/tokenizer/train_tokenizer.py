@@ -1,6 +1,10 @@
-import argparse
-import os
+import sys
 import glob
+
+repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+
 from tokenizers import Tokenizer, models, pre_tokenizers, decoders, trainers, processors
 from backend.tokenizer.config import TokenizerConfig
 

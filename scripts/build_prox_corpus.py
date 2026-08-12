@@ -5,8 +5,9 @@ import time
 import argparse
 import hashlib
 import statistics
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Set, Tuple, Optional
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
 
 from backend.datasets.categories import classify_document, DataCategory, CANONICAL_CATEGORIES
 from backend.datasets.config import (

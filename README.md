@@ -90,9 +90,11 @@ Follow this complete step-by-step guide to run corpus building, tokenizer traini
 Run this in Colab Cell 1:
 
 ```python
-# Cell 1: Clone ProX AI Repository
-!git clone https://github.com/ProXentix/ProX-AI.git
-%cd ProX-AI
+# Cell 1: Clone ProX AI Repository & Set Working Directory
+import os
+if not os.path.exists("/content/ProX-AI"):
+    !git clone https://github.com/ProXentix/ProX-AI.git /content/ProX-AI
+%cd /content/ProX-AI
 
 # Verify GPU availability
 import torch
@@ -135,18 +137,18 @@ You can build a **Small Test Corpus (100k tokens)**, **Medium Test Corpus (1M to
 #### Option A: Build 100k Test Corpus (Fast Validation - ~1 min)
 ```python
 # Cell 4: Run 100k Token Test Build
-!python scripts/build_prox_corpus.py --target-tokens 100000
+!PYTHONPATH=. python scripts/build_prox_corpus.py --target-tokens 100000
 ```
 
 #### Option B: Build Full 100M Token Corpus (~15-30 mins)
 ```python
 # Cell 4 (Alternative): Run Full 100M Token Build
-!python scripts/build_prox_corpus.py --target-tokens 100000000
+!PYTHONPATH=. python scripts/build_prox_corpus.py --target-tokens 100000000
 ```
 
 *Note: If disconnected, resume anytime with:*
 ```python
-!python scripts/build_prox_corpus.py --target-tokens 100000000 --resume
+!PYTHONPATH=. python scripts/build_prox_corpus.py --target-tokens 100000000 --resume
 ```
 
 ---
