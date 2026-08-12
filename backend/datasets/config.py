@@ -26,6 +26,18 @@ PROGRAMMING_LANGUAGE_TARGETS: Dict[str, float] = {
     "java": 0.11,         # 3.3M tokens
 }
 
+# Canonical programming language directory mapping for Hugging Face datasets (e.g. bigcode/the-stack-smol)
+PROGRAMMING_DATA_DIRS: Dict[str, str] = {
+    "python": "data/python",
+    "c": "data/c",
+    "cpp": "data/c++",
+    "javascript": "data/javascript",
+    "typescript": "data/typescript",
+    "rust": "data/rust",
+    "go": "data/go",
+    "java": "data/java",
+}
+
 DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "FineWeb-Edu",
@@ -39,7 +51,7 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "The Stack Smol (Python)",
         "dataset_id": "bigcode/the-stack-smol",
-        "subset": "data/python",
+        "subset": PROGRAMMING_DATA_DIRS["python"],
         "category": "programming_languages",
         "language": "python",
         "auth_required": True,
@@ -49,7 +61,7 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "The Stack Smol (C)",
         "dataset_id": "bigcode/the-stack-smol",
-        "subset": "data/c",
+        "subset": PROGRAMMING_DATA_DIRS["c"],
         "category": "programming_languages",
         "language": "c",
         "auth_required": True,
@@ -59,7 +71,7 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "The Stack Smol (C++)",
         "dataset_id": "bigcode/the-stack-smol",
-        "subset": "data/cpp",
+        "subset": PROGRAMMING_DATA_DIRS["cpp"],
         "category": "programming_languages",
         "language": "cpp",
         "auth_required": True,
@@ -69,7 +81,7 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "The Stack Smol (JavaScript)",
         "dataset_id": "bigcode/the-stack-smol",
-        "subset": "data/javascript",
+        "subset": PROGRAMMING_DATA_DIRS["javascript"],
         "category": "programming_languages",
         "language": "js",
         "auth_required": True,
@@ -79,7 +91,7 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "The Stack Smol (TypeScript)",
         "dataset_id": "bigcode/the-stack-smol",
-        "subset": "data/typescript",
+        "subset": PROGRAMMING_DATA_DIRS["typescript"],
         "category": "programming_languages",
         "language": "ts",
         "auth_required": True,
@@ -89,7 +101,7 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "The Stack Smol (Rust)",
         "dataset_id": "bigcode/the-stack-smol",
-        "subset": "data/rust",
+        "subset": PROGRAMMING_DATA_DIRS["rust"],
         "category": "programming_languages",
         "language": "rust",
         "auth_required": True,
@@ -99,7 +111,7 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "The Stack Smol (Go)",
         "dataset_id": "bigcode/the-stack-smol",
-        "subset": "data/go",
+        "subset": PROGRAMMING_DATA_DIRS["go"],
         "category": "programming_languages",
         "language": "go",
         "auth_required": True,
@@ -109,7 +121,7 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
     {
         "dataset_name": "The Stack Smol (Java)",
         "dataset_id": "bigcode/the-stack-smol",
-        "subset": "data/java",
+        "subset": PROGRAMMING_DATA_DIRS["java"],
         "category": "programming_languages",
         "language": "java",
         "auth_required": True,

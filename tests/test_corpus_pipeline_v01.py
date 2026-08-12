@@ -5,6 +5,8 @@ import pytest
 from backend.datasets.config import (
     TARGET_CONFIG,
     PROGRAMMING_LANGUAGE_TARGETS,
+    PROGRAMMING_DATA_DIRS,
+    DATASET_REGISTRY,
     get_scaled_target_config,
     validate_target_config,
     check_hf_authentication,
@@ -19,6 +21,12 @@ from backend.datasets.quality import validate_code_syntax
 from backend.datasets.streaming import RobustNetworkStreamer
 from backend.tokenizer.tokenizer import ProXTokenizer
 from scripts.build_prox_corpus import generate_source_audit_report
+
+def test_programming_data_dirs_mapping():
+    assert PROGRAMMING_DATA_DIRS["cpp"] == "data/c++"
+    cpp_entry = next((ds for ds in DATASET_REGISTRY if ds.get("language") == "cpp"), None)
+    assert cpp_entry is not None
+    assert cpp_entry["subset"] == "data/c++"
 
 def test_target_config_validation():
     assert validate_target_config(TARGET_CONFIG) is True

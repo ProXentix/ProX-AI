@@ -23,7 +23,7 @@
     "dataset_id": "bigcode/the-stack-smol",
     "source_url": "https://huggingface.co/datasets/bigcode/the-stack-smol",
     "dataset_revision": "main",
-    "subset": "data/python, data/c, data/cpp, data/javascript, data/typescript, data/rust, data/go, data/java",
+    "subset": "data/python, data/c, data/c++, data/javascript, data/typescript, data/rust, data/go, data/java",
     "category": "programming_languages",
     "languages": ["python", "c", "cpp", "javascript", "typescript", "rust", "go", "java"],
     "license": "BigCode Dataset Terms / Individual Open-Source Permissive Licenses (MIT, Apache-2.0, BSD)",

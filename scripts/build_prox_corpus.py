@@ -5,6 +5,7 @@ import time
 import argparse
 import hashlib
 import statistics
+from datetime import datetime, timezone
 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
@@ -13,6 +14,7 @@ from backend.datasets.categories import classify_document, DataCategory, CANONIC
 from backend.datasets.config import (
     TARGET_CONFIG,
     PROGRAMMING_LANGUAGE_TARGETS,
+    PROGRAMMING_DATA_DIRS,
     DATASET_REGISTRY,
     get_scaled_target_config,
     validate_target_config,
@@ -392,14 +394,14 @@ def build_prox_corpus_pipeline(
             }
             
             stack_subsets = [
-                ("data/python", "python", prog_subtargets.get("python", int(target*0.20))),
-                ("data/c", "c", prog_subtargets.get("c", int(target*0.13))),
-                ("data/cpp", "cpp", prog_subtargets.get("cpp", int(target*0.13))),
-                ("data/javascript", "js", prog_subtargets.get("js", int(target*0.13))),
-                ("data/typescript", "ts", prog_subtargets.get("ts", int(target*0.10))),
-                ("data/rust", "rust", prog_subtargets.get("rust", int(target*0.10))),
-                ("data/go", "go", prog_subtargets.get("go", int(target*0.10))),
-                ("data/java", "java", prog_subtargets.get("java", int(target*0.11))),
+                (PROGRAMMING_DATA_DIRS["python"], "python", prog_subtargets.get("python", int(target*0.20))),
+                (PROGRAMMING_DATA_DIRS["c"], "c", prog_subtargets.get("c", int(target*0.13))),
+                (PROGRAMMING_DATA_DIRS["cpp"], "cpp", prog_subtargets.get("cpp", int(target*0.13))),
+                (PROGRAMMING_DATA_DIRS["javascript"], "js", prog_subtargets.get("javascript", prog_subtargets.get("js", int(target*0.13)))),
+                (PROGRAMMING_DATA_DIRS["typescript"], "ts", prog_subtargets.get("typescript", prog_subtargets.get("ts", int(target*0.10)))),
+                (PROGRAMMING_DATA_DIRS["rust"], "rust", prog_subtargets.get("rust", int(target*0.10))),
+                (PROGRAMMING_DATA_DIRS["go"], "go", prog_subtargets.get("go", int(target*0.10))),
+                (PROGRAMMING_DATA_DIRS["java"], "java", prog_subtargets.get("java", int(target*0.11))),
             ]
 
             for data_dir, lang_key, lang_target in stack_subsets:

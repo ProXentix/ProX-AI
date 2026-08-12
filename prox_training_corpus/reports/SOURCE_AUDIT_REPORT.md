@@ -1,6 +1,6 @@
 # PROX TRAINING CORPUS v0.1 — Dataset Source Audit Report
 
-**Date:** 2026-08-12 08:28 UTC  
+**Date:** 2026-08-12 09:09 UTC  
 **Hugging Face Authentication Status:** **HF authentication: NOT AVAILABLE**  
 **Pipeline Version:** v0.1  
 
@@ -23,7 +23,7 @@ This audit evaluates all candidate data sources for pre-training preflight acces
 | `FineWeb-Edu` | `sample-10BT` | `general_natural_language` | `en` | NO | **YES** | `wikimedia/wikipedia (20231101.en)` | ODC-By 1.0 | `ACCESSIBLE` |
 | `The Stack Smol (Python)` | `data/python` | `programming_languages` | `python` | YES | **NO** | `codeparrot/codeparrot-clean-train` | BigCode Terms / Apache-2.0 | `GATED_UNAUTHENTICATED (Fallback Active)` |
 | `The Stack Smol (C)` | `data/c` | `programming_languages` | `c` | YES | **NO** | `m-a-p/code_bagel (c_subset)` | BigCode Terms / Apache-2.0 | `GATED_UNAUTHENTICATED (Fallback Active)` |
-| `The Stack Smol (C++)` | `data/cpp` | `programming_languages` | `cpp` | YES | **NO** | `m-a-p/code_bagel (cpp_subset)` | BigCode Terms / Apache-2.0 | `GATED_UNAUTHENTICATED (Fallback Active)` |
+| `The Stack Smol (C++)` | `data/c++` | `programming_languages` | `cpp` | YES | **NO** | `m-a-p/code_bagel (cpp_subset)` | BigCode Terms / Apache-2.0 | `GATED_UNAUTHENTICATED (Fallback Active)` |
 | `The Stack Smol (JavaScript)` | `data/javascript` | `programming_languages` | `js` | YES | **NO** | `bigcode/starcoderdata (js_subset)` | BigCode Terms / Apache-2.0 | `GATED_UNAUTHENTICATED (Fallback Active)` |
 | `The Stack Smol (TypeScript)` | `data/typescript` | `programming_languages` | `ts` | YES | **NO** | `bigcode/starcoderdata (ts_subset)` | BigCode Terms / Apache-2.0 | `GATED_UNAUTHENTICATED (Fallback Active)` |
 | `The Stack Smol (Rust)` | `data/rust` | `programming_languages` | `rust` | YES | **NO** | `bigcode/starcoderdata (rust_subset)` | BigCode Terms / Apache-2.0 | `GATED_UNAUTHENTICATED (Fallback Active)` |
