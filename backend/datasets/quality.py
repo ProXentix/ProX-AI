@@ -1,5 +1,6 @@
 import ast
 import hashlib
+import warnings
 import unicodedata
 import statistics
 from typing import List, Dict, Any, Union
@@ -8,9 +9,11 @@ from backend.tokenizer.tokenizer import ProXTokenizer
 
 def validate_code_syntax(code: str, language: str = "python") -> Dict[str, Any]:
     """Validates source code syntax where practical (Python AST parse, JS/TS/ProXPL heuristics)."""
-    if language == "python" or language == "py":
+    if language in ["python", "py"]:
         try:
-            ast.parse(code)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+                ast.parse(code)
             return {"valid": True, "error": None}
         except SyntaxError as e:
             return {"valid": False, "error": f"Python SyntaxError: {e.msg} at line {e.lineno}"}

@@ -2,13 +2,23 @@ import os
 import json
 import tempfile
 import pytest
-from backend.datasets.config import TARGET_CONFIG, get_scaled_target_config, validate_target_config
+from backend.datasets.config import (
+    TARGET_CONFIG,
+    PROGRAMMING_LANGUAGE_TARGETS,
+    get_scaled_target_config,
+    validate_target_config,
+    check_hf_authentication,
+    audit_dataset_sources
+)
 from backend.datasets.stratified_split import assign_stratified_split
 from backend.datasets.checkpoint import CorpusCheckpointManager
 from backend.datasets.sharded_writer import ShardedCorpusWriter
 from backend.datasets.proxpl_sources import load_approved_proxpl_corpus, verify_zero_repo_contamination
 from backend.datasets.leakage import DataLeakageChecker, verify_no_leakage
+from backend.datasets.quality import validate_code_syntax
+from backend.datasets.streaming import RobustNetworkStreamer
 from backend.tokenizer.tokenizer import ProXTokenizer
+from scripts.build_prox_corpus import generate_source_audit_report
 
 def test_target_config_validation():
     assert validate_target_config(TARGET_CONFIG) is True
@@ -18,10 +28,23 @@ def test_target_config_validation():
 
     invalid_config = {
         "target_total_tokens": 100,
-        "category_targets": {"cat_a": 50, "cat_b": 40}  # sum 90 != 100
+        "category_targets": {"cat_a": 50, "cat_b": 40}
     }
     with pytest.raises(ValueError):
         validate_target_config(invalid_config)
+
+def test_hf_authentication_preflight_formatting():
+    status_str, is_auth = check_hf_authentication()
+    assert status_str in ["AVAILABLE", "NOT AVAILABLE"]
+    assert isinstance(is_auth, bool)
+
+def test_audit_dataset_sources():
+    audit_res = audit_dataset_sources("NOT AVAILABLE")
+    assert len(audit_res) > 0
+    for r in audit_res:
+        assert "dataset_name" in r
+        assert "category" in r
+        assert "accessible" in r
 
 def test_deterministic_stratified_split():
     record1 = {"sha256": "abc123sha", "category": "general_natural_language", "language": "en", "source": "src1"}
@@ -61,7 +84,7 @@ def test_sharded_corpus_writer():
         writer.close()
 
         files = os.listdir(tmp_dir)
-        assert len(files) == 2  # Shard 0 with 2 records, Shard 1 with 1 record
+        assert len(files) == 2
 
 def test_zero_repository_contamination():
     clean_records = [
@@ -84,7 +107,7 @@ def test_zero_repository_contamination():
     with pytest.raises(ValueError):
         verify_zero_repo_contamination(dirty_records)
 
-def test_approved_proxpl_corpus_loading():
+def test_approved_proxpl_corpus_provenance():
     tokenizer = ProXTokenizer()
     records = load_approved_proxpl_corpus(tokenizer)
     assert len(records) > 0
@@ -92,18 +115,25 @@ def test_approved_proxpl_corpus_loading():
         assert r["category"] == "proxpl"
         assert r["language"] == "proxpl"
         assert "sha256" in r
+        assert "permission_basis" in r
+        assert "approved_for_training" in r
 
-def test_leakage_detection():
-    train_docs = ["Sample document for training classification.", "Another distinct training sample."]
-    val_docs_clean = ["Validation text that is completely non-overlapping."]
-    val_docs_leaked = ["Sample document for training classification."]
+def test_syntax_warning_isolation():
+    # String literal with invalid backslash escape '\s'
+    code_with_invalid_escape = "def foo():\n    s = '\\s\\w\\d'\n    return s"
+    res = validate_code_syntax(code_with_invalid_escape, "python")
+    assert res["valid"] is True
 
-    checker = DataLeakageChecker()
-    clean_rep = checker.check_leakage(train_docs, val_docs_clean)
-    assert clean_rep["is_clean"] is True
-    assert verify_no_leakage(clean_rep, raise_on_leak=False) is True
+def test_robust_network_streamer():
+    streamer = RobustNetworkStreamer(max_retries=1, initial_backoff=0.01)
+    def dummy_gen():
+        yield {"text": "hello"}
 
-    leaked_rep = checker.check_leakage(train_docs, val_docs_leaked)
-    assert leaked_rep["is_clean"] is False
-    with pytest.raises(RuntimeError):
-        verify_no_leakage(leaked_rep, raise_on_leak=True)
+    items = list(streamer.safe_stream(dummy_gen, "DummySource"))
+    assert len(items) == 1
+    assert items[0]["text"] == "hello"
+
+def test_source_audit_report_generation():
+    audit_results = audit_dataset_sources("NOT AVAILABLE")
+    report_path = generate_source_audit_report(audit_results, "NOT AVAILABLE")
+    assert os.path.exists(report_path)

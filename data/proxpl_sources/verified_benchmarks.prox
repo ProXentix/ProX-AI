@@ -1,0 +1,26 @@
+// ProXPL High-Throughput Matrix Multiply Benchmark
+
+use std::tensor::{Tensor, Device};
+use std::time::Instant;
+
+pub async fn run_matmul_benchmark(iters: usize) -> f64 {
+    let device = Device::Cuda(0);
+    let a: Tensor<f32, [4096, 4096]> = Tensor::ones(device);
+    let b: Tensor<f32, [4096, 4096]> = Tensor::ones(device);
+
+    let start = Instant::now();
+    for _ in 0..iters {
+        let _c = a.matmul(&b).await;
+    }
+    let elapsed = start.elapsed().as_secs_f64();
+    let total_flops = (2.0 * 4096.0 * 4096.0 * 4096.0 * iters as f64) / 1e12;
+    let tflops = total_flops / elapsed;
+
+    println!("Executed {} iterations in {:.4}s ({:.2} TFLOPS)", iters, elapsed, tflops);
+    tflops
+}
+
+pub fn main() {
+    let tflops = run_matmul_benchmark(100);
+    assert!(tflops > 10.0, "Performance below minimum target TFLOPS");
+}

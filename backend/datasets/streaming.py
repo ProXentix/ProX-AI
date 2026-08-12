@@ -1,6 +1,9 @@
 import os
 import json
-from typing import Generator, List
+import time
+import socket
+from typing import Generator, List, Dict, Any, Callable
+
 from backend.tokenizer.tokenizer import ProXTokenizer
 
 class LocalDatasetStreamer:
@@ -31,3 +34,44 @@ class LocalDatasetStreamer:
                         chunk = buffer[: self.max_seq_len + 1]
                         buffer = buffer[self.max_seq_len + 1 :]
                         yield chunk
+
+class RobustNetworkStreamer:
+    """Handles transient Windows network socket errors ([WinError 10038]), timeouts, and HF stream reconnects."""
+    def __init__(self, max_retries: int = 5, initial_backoff: float = 2.0):
+        self.max_retries = max_retries
+        self.initial_backoff = initial_backoff
+        self.retry_stats = {
+            "NETWORK_RETRY_SUCCESS": 0,
+            "NETWORK_RETRY_EXHAUSTED": 0,
+            "SOURCE_FAILED": 0,
+            "SOURCE_FALLBACK_USED": 0
+        }
+
+    def safe_stream(self, dataset_generator_builder: Callable[[], Generator[Dict[str, Any], None, None]], source_name: str) -> Generator[Dict[str, Any], None, None]:
+        retries = 0
+        backoff = self.initial_backoff
+        
+        while retries <= self.max_retries:
+            try:
+                ds_iter = dataset_generator_builder()
+                for item in ds_iter:
+                    yield item
+                # Completed successfully
+                return
+            except (OSError, socket.error, TimeoutError, ConnectionResetError, Exception) as e:
+                err_str = str(e)
+                retries += 1
+                if retries > self.max_retries:
+                    print(f"[{source_name}] NETWORK_RETRY_EXHAUSTED after {self.max_retries} attempts: {err_str}", flush=True)
+                    self.retry_stats["NETWORK_RETRY_EXHAUSTED"] += 1
+                    self.retry_stats["SOURCE_FAILED"] += 1
+                    raise e
+                
+                print(
+                    f"[{source_name}] Transient network/socket warning ({err_str[:60]}...). "
+                    f"Re-initializing stream (Attempt {retries}/{self.max_retries} in {backoff:.1f}s)...",
+                    flush=True
+                )
+                self.retry_stats["NETWORK_RETRY_SUCCESS"] += 1
+                time.sleep(backoff)
+                backoff *= 2.0
