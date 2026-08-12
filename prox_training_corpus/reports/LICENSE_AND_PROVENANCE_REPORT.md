@@ -1,6 +1,6 @@
 # PROX TRAINING CORPUS v0.1 — License and Provenance Report
 
-**Date:** 2026-08-12 10:12 UTC  
+**Date:** 2026-08-12 10:13 UTC  
 **Corpus Version:** v0.1  
 **Status:** COMPLIANT & VERIFIED  
 

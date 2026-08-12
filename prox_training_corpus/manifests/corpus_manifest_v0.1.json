@@ -6,7 +6,7 @@
   "validation_tokens": 11100,
   "build_status": "PASSED",
   "is_100m_ready": true,
-  "creation_timestamp": "2026-08-12T10:12:23.147522+00:00",
+  "creation_timestamp": "2026-08-12T10:13:42.162600+00:00",
   "corpus_hash": "12d8f46f622f9908680c8196d730c338ac0d65579fea35dc82866f36fb91b15a",
   "summary_statistics": {
     "raw_streamed_document_count": 31,
@@ -66,8 +66,8 @@
     "SOURCE_FALLBACK_USED": 0
   },
   "leakage": {
-    "train_document_count": 124,
-    "val_document_count": 3,
+    "train_document_count": 152,
+    "val_document_count": 6,
     "exact_leak_count": 0,
     "near_leak_count": 0,
     "total_leak_count": 0,
@@ -80,7 +80,7 @@
     "sha256": "ae03bfc8edfde3fab00b13a6cd65312a30bcf470ff9182fd7d405ad49103e0a1"
   },
   "build": {
-    "timestamp": "2026-08-12T10:12:23.148001+00:00",
+    "timestamp": "2026-08-12T10:13:42.163280+00:00",
     "pipeline_version": "v0.1",
     "configuration_hash": "42f387587a86a029db3289810dab931b34256473a5d808aadef45d68da71c407"
   }
