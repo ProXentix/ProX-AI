@@ -1,25 +1,21 @@
 {
   "pipeline_version": "v0.1",
-  "configuration_hash": "f31dc4992e2e4209fb75d8a1f3f7f9cbafe6489198534f25cf264c33da55a540",
-  "last_updated": "2026-08-12T08:30:28.019067+00:00",
+  "configuration_hash": "42f387587a86a029db3289810dab931b34256473a5d808aadef45d68da71c407",
+  "last_updated": "2026-08-12T10:12:22.353322+00:00",
   "category_tokens": {
-    "general_natural_language": 4508314,
-    "programming_languages": 3003284,
-    "technical_documentation": 1000413,
-    "proxpl": 10898,
-    "mathematics_reasoning": 502024,
-    "structured_technical_text": 0
+    "general_natural_language": 57600,
+    "programming_languages": 30860,
+    "technical_documentation": 15492,
+    "mathematics_reasoning": 7039
   },
   "category_docs": {
-    "general_natural_language": 1003,
-    "programming_languages": 423,
-    "technical_documentation": 706,
-    "proxpl": 10,
-    "mathematics_reasoning": 75,
-    "structured_technical_text": 0
+    "general_natural_language": 14,
+    "programming_languages": 5,
+    "technical_documentation": 11,
+    "mathematics_reasoning": 1
   },
   "language_tokens": {
-    "python": 3003284,
+    "python": 30860,
     "c": 0,
     "cpp": 0,
     "js": 0,
@@ -27,10 +23,9 @@
     "rust": 0,
     "go": 0,
     "java": 0,
-    "en": 5508727,
-    "proxpl": 10898,
-    "math": 502024
+    "en": 73092,
+    "math": 7039
   },
   "completed_datasets": [],
-  "seen_sha256_count": 2217
+  "seen_sha256_count": 31
 }

@@ -86,3 +86,14 @@ def verify_no_leakage(leakage_report: Dict[str, Any], raise_on_leak: bool = True
         return False
     return True
 
+def verify_zero_repo_contamination(records: List[Dict[str, Any]]) -> bool:
+    """Verifies that no local ProX-AI implementation code exists in corpus records."""
+    import os
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    for r in records:
+        source_id = str(r.get("source_id", ""))
+        source_url = str(r.get("source_url", ""))
+        if repo_root in source_id or repo_root in source_url:
+            raise ValueError(f"HARD RULE VIOLATION: Repository file detected in corpus record: {source_id}")
+    return True
+

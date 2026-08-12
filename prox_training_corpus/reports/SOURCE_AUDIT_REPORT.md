@@ -1,6 +1,6 @@
 # PROX TRAINING CORPUS v0.1 — Dataset Source Audit Report
 
-**Date:** 2026-08-12 09:41 UTC  
+**Date:** 2026-08-12 10:10 UTC  
 **Hugging Face Authentication Status:** **HF authentication: NOT AVAILABLE**  
 **Pipeline Version:** v0.1  
 
@@ -10,7 +10,7 @@
 
 This audit evaluates all candidate data sources for pre-training preflight accessibility, authentication requirements, category mapping, and explicit fallback options.
 
-- **Total Data Sources Evaluated:** 13
+- **Total Data Sources Evaluated:** 12
 - **Hugging Face Token Status:** `NOT AVAILABLE` (Token value is never logged or stored)
 - **Gated Datasets Access:** DISABLED (Permissive Fallbacks Active)
 
@@ -31,7 +31,6 @@ This audit evaluates all candidate data sources for pre-training preflight acces
 | `The Stack Smol (Java)` | `data/java` | `programming_languages` | `java` | YES | **NO** | `bigcode/starcoderdata (java_subset)` | BigCode Terms / Apache-2.0 | `GATED_UNAUTHENTICATED (Fallback Active)` |
 | `CodeXGlue NL/Code Search` | `default` | `technical_documentation` | `en` | NO | **YES** | `None Required` | Apache-2.0 | `ACCESSIBLE` |
 | `AG News Sci/Tech` | `default` | `technical_documentation` | `en` | NO | **YES** | `None Required` | Academic / Public News | `ACCESSIBLE` |
-| `ProXPL Approved Specification Corpus` | `data/proxpl_sources/` | `proxpl` | `proxpl` | NO | **YES** | `Shortfall Preserved Cleanly` | Apache-2.0 Open Spec | `ACCESSIBLE` |
 | `OpenWebMath` | `default` | `mathematics_reasoning` | `en` | NO | **YES** | `None Required` | ODC-By 1.0 | `ACCESSIBLE` |
 
 ---
@@ -41,5 +40,5 @@ This audit evaluates all candidate data sources for pre-training preflight acces
 - **General Natural Language:** `FineWeb-Edu` (Accessible) with `Wikipedia` fallback.
 - **Programming Languages:** Multi-language streaming across `Python, C, C++, JavaScript, TypeScript, Rust, Go, Java` with `CodeParrot Clean / StarCoderData` fallbacks.
 - **Technical Documentation:** `CodeXGlue` & `AG News Sci/Tech` (Accessible).
-- **ProXPL Approved Corpus:** `ProXPL Official Specification & Stdlib` (Accessible with provenance).
+- **ProXPL Status:** ProXPL was removed from PROX TRAINING CORPUS v0.1 and is not included in the v0.1 training corpus.
 - **Mathematics & Reasoning:** `OpenWebMath` (Accessible).

@@ -60,8 +60,7 @@ from backend.datasets.config import (
 )
 from backend.datasets.quality import DatasetQualityPipeline, validate_code_syntax
 from backend.datasets.deduplication import DatasetDeduplicator, compute_sha256
-from backend.datasets.leakage import DataLeakageChecker, verify_no_leakage
-from backend.datasets.proxpl_sources import load_approved_proxpl_corpus, verify_zero_repo_contamination
+from backend.datasets.leakage import DataLeakageChecker, verify_no_leakage, verify_zero_repo_contamination
 from backend.datasets.checkpoint import CorpusCheckpointManager
 from backend.datasets.sharded_writer import ShardedCorpusWriter
 from backend.datasets.stratified_split import assign_stratified_split
@@ -180,7 +179,7 @@ This audit evaluates all candidate data sources for pre-training preflight acces
 - **General Natural Language:** `FineWeb-Edu` (Accessible) with `Wikipedia` fallback.
 - **Programming Languages:** Multi-language streaming across `Python, C, C++, JavaScript, TypeScript, Rust, Go, Java` with `CodeParrot Clean / StarCoderData` fallbacks.
 - **Technical Documentation:** `CodeXGlue` & `AG News Sci/Tech` (Accessible).
-- **ProXPL Approved Corpus:** `ProXPL Official Specification & Stdlib` (Accessible with provenance).
+- **ProXPL Status:** ProXPL was removed from PROX TRAINING CORPUS v0.1 and is not included in the v0.1 training corpus.
 - **Mathematics & Reasoning:** `OpenWebMath` (Accessible).
 """
     with open(report_path, "w", encoding="utf-8") as f:
@@ -246,9 +245,12 @@ def build_prox_corpus_pipeline(
             print(f"[Corpus Builder] Warning: Existing manifest not found at {manifest_path}", flush=True)
             return {"status": "MANIFEST_NOT_FOUND"}
 
+    config_hash = hashlib.sha256(json.dumps(config, sort_keys=True).encode("utf-8")).hexdigest()
     checkpoint_mgr = CorpusCheckpointManager()
     if resume:
-        checkpoint_mgr.load_checkpoint()
+        loaded = checkpoint_mgr.load_checkpoint(expected_config_hash=config_hash)
+        if not loaded:
+            resume = False
 
     # Setup Sharded Writers
     raw_writer = ShardedCorpusWriter(RAW_DIR, prefix="raw", max_records_per_shard=5000)
@@ -572,40 +574,7 @@ def build_prox_corpus_pipeline(
                 except Exception as e:
                     print(f"    Notice: AG News streaming issue ({e}).", flush=True)
 
-    # 4. PROXPL (10M Target or Approved Corpus)
-    proxpl_accounting = {}
-    if single_category in [None, "proxpl"]:
-        cat_key = "proxpl"
-        target = category_targets[cat_key]
-        if category_tokens[cat_key] < target:
-            print(f"\n[Corpus Builder] Category: ProXPL (Target: {target:,} tokens)", flush=True)
-            proxpl_records = load_approved_proxpl_corpus(tokenizer)
-            initial_toks = category_tokens[cat_key]
-            for rec in proxpl_records:
-                if category_tokens[cat_key] >= target:
-                    break
-                process_and_write_sample(rec)
-            
-            accepted_proxpl_toks = category_tokens[cat_key]
-            shortfall = max(0, target - accepted_proxpl_toks)
-            proxpl_accounting = {
-                "target_tokens": target,
-                "accepted_tokens": accepted_proxpl_toks,
-                "accepted_records": category_docs[cat_key],
-                "rejected_records": category_rejected_docs.get(cat_key, 0),
-                "source_exhausted": shortfall > 0,
-                "remaining_shortfall": shortfall,
-                "status": "PROXPL TARGET UNACHIEVABLE WITH CURRENT APPROVED SOURCES" if shortfall > 0 else "TARGET_REACHED"
-            }
-            if shortfall > 0:
-                print(
-                    f"  • PROXPL TARGET UNACHIEVABLE WITH CURRENT APPROVED SOURCES: "
-                    f"Ingested {accepted_proxpl_toks:,} tokens (Shortfall: {shortfall:,} tokens). "
-                    f"Preserving strict provenance and zero repository contamination without faking token counts.",
-                    flush=True
-                )
-
-    # 5. MATHEMATICS & REASONING (5M Target)
+    # 4. MATHEMATICS & REASONING (5M Target)
     if single_category in [None, "mathematics_reasoning"]:
         cat_key = "mathematics_reasoning"
         target = category_targets[cat_key]
@@ -665,36 +634,40 @@ def build_prox_corpus_pipeline(
     sample_train_texts = []
     sample_val_texts = []
     
+    def _read_lines_from_file(filepath: str) -> List[str]:
+        lines = []
+        if filepath.endswith(".gz"):
+            import gzip
+            with gzip.open(filepath, "rt", encoding="utf-8") as f:
+                lines = [line.strip() for line in f if line.strip()]
+        elif filepath.endswith(".zst"):
+            import zstandard as zstd
+            with open(filepath, "rb") as raw:
+                dctx = zstd.ZstdDecompressor()
+                with dctx.stream_reader(raw) as reader:
+                    text_data = reader.read().decode("utf-8")
+                    lines = [line.strip() for line in text_data.split("\n") if line.strip()]
+        else:
+            with open(filepath, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f if line.strip()]
+        return lines
+
     for t_file in os.listdir(TRAIN_DIR):
         if t_file.startswith("train_shard"):
             t_path = os.path.join(TRAIN_DIR, t_file)
             try:
-                if t_path.endswith(".gz"):
-                    import gzip
-                    f_in = gzip.open(t_path, "rt", encoding="utf-8")
-                else:
-                    f_in = open(t_path, "r", encoding="utf-8")
-                for i, line in enumerate(f_in):
-                    if i >= 1000: break
+                for line in _read_lines_from_file(t_path)[:1000]:
                     obj = json.loads(line)
                     sample_train_texts.append(obj["text"])
-                f_in.close()
             except Exception: pass
 
     for v_file in os.listdir(VAL_DIR):
         if v_file.startswith("val_shard"):
             v_path = os.path.join(VAL_DIR, v_file)
             try:
-                if v_path.endswith(".gz"):
-                    import gzip
-                    f_in = gzip.open(v_path, "rt", encoding="utf-8")
-                else:
-                    f_in = open(v_path, "r", encoding="utf-8")
-                for i, line in enumerate(f_in):
-                    if i >= 500: break
+                for line in _read_lines_from_file(v_path)[:500]:
                     obj = json.loads(line)
                     sample_val_texts.append(obj["text"])
-                f_in.close()
             except Exception: pass
 
     leakage_checker = DataLeakageChecker()
@@ -772,7 +745,6 @@ def build_prox_corpus_pipeline(
             } for cat in CANONICAL_CATEGORIES
         },
         "programming_language_breakdown": language_tokens,
-        "proxpl_accounting": proxpl_accounting,
         "network_retry_statistics": net_streamer.retry_stats,
         "leakage": leakage_report,
         "tokenizer": {
@@ -792,8 +764,6 @@ def build_prox_corpus_pipeline(
 
     # 1. CORPUS BUILD REPORT
     build_report_path = os.path.join(REPORTS_DIR, "CORPUS_BUILD_REPORT.md")
-    proxpl_shortfall_val = proxpl_accounting.get("remaining_shortfall", 0)
-    proxpl_notice_str = f"PROXPL TARGET UNACHIEVABLE WITH CURRENT APPROVED SOURCES (Shortfall: {proxpl_shortfall_val:,} tokens)" if proxpl_shortfall_val > 0 else "TARGET REACHED"
 
     with open(build_report_path, "w", encoding="utf-8") as f:
         f.write(f"""# PROX TRAINING CORPUS v0.1 — Build Report
@@ -852,16 +822,9 @@ def build_prox_corpus_pipeline(
 
 ---
 
-## 5. ProXPL Source Accounting & Provenance Report
+## 5. ProXPL Status & Pipeline Policy
 
-- **ProXPL Target:** **{category_targets.get('proxpl', 10000000):,} tokens**
-- **ProXPL Accepted Tokens:** **{category_tokens.get('proxpl', 0):,} tokens**
-- **ProXPL Accepted Documents:** **{category_docs.get('proxpl', 0):,} documents**
-- **ProXPL Rejected Documents:** **{category_rejected_docs.get('proxpl', 0):,} documents**
-- **ProXPL Remaining Shortfall:** **{proxpl_shortfall_val:,} tokens**
-- **ProXPL License Distribution:** Apache-2.0 Open Source Specification
-- **ProXPL Primary Source URL:** `https://github.com/ProgrammerKR/ProXPL`
-- **Accounting Status:** **`{proxpl_notice_str}`**
+ProXPL was removed from PROX TRAINING CORPUS v0.1 and is not included in the v0.1 training corpus.
 
 ---
 
@@ -941,7 +904,6 @@ The ProX Training Corpus v0.1 enforces strict license and provenance tracking.
 | **The Stack Smol** | `https://huggingface.co/datasets/bigcode/the-stack-smol` | `programming_languages` | BigCode Terms / Apache-2.0 | Yes | VERIFIED |
 | **CodeXGlue** | `https://huggingface.co/datasets/google/code_x_glue_tc_nl_code_search_adv` | `technical_documentation` | Apache-2.0 | Yes | VERIFIED |
 | **OpenWebMath** | `https://huggingface.co/datasets/open-web-math/open-web-math` | `mathematics_reasoning` | ODC-By 1.0 | Yes | VERIFIED |
-| **ProXPL Approved Corpus** | `https://github.com/ProgrammerKR/ProXPL` | `proxpl` | Apache-2.0 Open Spec | Yes | VERIFIED |
 
 ---
 
@@ -973,7 +935,7 @@ def main():
     parser.add_argument("--resume", action="store_true", help="Resume build from latest checkpoint")
     parser.add_argument("--dry-run", action="store_true", help="Print preflight source audit and dataset accessibility check")
     parser.add_argument("--report-only", action="store_true", help="Generate build report from existing manifest without streaming")
-    parser.add_argument("--category", type=str, default=None, help="Limit streaming build to a specific category")
+    parser.add_argument("--category", type=str, choices=CANONICAL_CATEGORIES, default=None, help="Limit streaming build to a specific category")
     args = parser.parse_args()
 
     build_prox_corpus_pipeline(

@@ -27,12 +27,23 @@ class CorpusCheckpointManager:
             "seen_sha256_count": 0,
         }
 
-    def load_checkpoint(self) -> bool:
+    def load_checkpoint(self, expected_config_hash: Optional[str] = None) -> bool:
         if os.path.exists(self.checkpoint_path):
             try:
                 with open(self.checkpoint_path, "r", encoding="utf-8") as f:
-                    self.state = json.load(f)
-                print(f"[Checkpoint] Loaded existing checkpoint from {self.checkpoint_path}")
+                    data = json.load(f)
+                
+                cat_tokens = data.get("category_tokens", {})
+                if "proxpl" in cat_tokens:
+                    print(f"[Checkpoint] Invalidating old checkpoint containing removed category 'proxpl': {self.checkpoint_path}")
+                    return False
+                
+                if expected_config_hash and data.get("configuration_hash") != expected_config_hash:
+                    print(f"[Checkpoint] Configuration hash mismatch (stored={data.get('configuration_hash')[:8]}, expected={expected_config_hash[:8]}). Invalidating checkpoint.")
+                    return False
+                
+                self.state = data
+                print(f"[Checkpoint] Loaded valid checkpoint from {self.checkpoint_path}")
                 return True
             except Exception as e:
                 print(f"[Checkpoint] Failed to load checkpoint: {e}")

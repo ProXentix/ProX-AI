@@ -5,10 +5,9 @@ from typing import Dict, Any, List, Tuple, Optional
 TARGET_CONFIG: Dict[str, Any] = {
     "target_total_tokens": 100_000_000,
     "category_targets": {
-        "general_natural_language": 45_000_000,
+        "general_natural_language": 50_000_000,
         "programming_languages": 30_000_000,
-        "technical_documentation": 10_000_000,
-        "proxpl": 10_000_000,
+        "technical_documentation": 15_000_000,
         "mathematics_reasoning": 5_000_000,
     },
     "validation_ratio": 0.10,
@@ -147,15 +146,6 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
         "license": "Academic / Public News"
     },
     {
-        "dataset_name": "ProXPL Approved Specification Corpus",
-        "dataset_id": "proxpl_approved_sources",
-        "subset": "data/proxpl_sources/",
-        "category": "proxpl",
-        "auth_required": False,
-        "fallback": "Shortfall Preserved Cleanly",
-        "license": "Apache-2.0 Open Spec"
-    },
-    {
         "dataset_name": "OpenWebMath",
         "dataset_id": "open-web-math/open-web-math",
         "subset": "default",
@@ -207,8 +197,10 @@ def get_scaled_target_config(target_tokens: int) -> Dict[str, Any]:
     }
 
 def validate_target_config(config: Dict[str, Any]) -> bool:
-    """Validates that category targets sum exactly to the target_total_tokens."""
+    """Validates that category targets sum exactly to the target_total_tokens and contains no proxpl."""
     cat_targets = config.get("category_targets", {})
+    if "proxpl" in cat_targets:
+        raise ValueError("Configuration Error: 'proxpl' category is prohibited in PROX TRAINING CORPUS v0.1.")
     total_target = config.get("target_total_tokens", 0)
     sum_cats = sum(cat_targets.values())
     if sum_cats != total_target:
@@ -226,21 +218,6 @@ def audit_dataset_sources(hf_token_status: str) -> List[Dict[str, Any]]:
     for ds in DATASET_REGISTRY:
         ds_id = ds["dataset_id"]
         auth_req = ds["auth_required"]
-        
-        if ds_id == "proxpl_approved_sources":
-            audit_results.append({
-                "dataset_name": ds["dataset_name"],
-                "dataset_id": ds_id,
-                "subset": ds["subset"],
-                "category": ds["category"],
-                "language": ds.get("language", "proxpl"),
-                "auth_required": auth_req,
-                "accessible": True,
-                "status": "ACCESSIBLE",
-                "fallback": ds["fallback"],
-                "license": ds["license"]
-            })
-            continue
 
         if auth_req and not is_authenticated:
             accessible = False

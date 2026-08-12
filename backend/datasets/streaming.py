@@ -80,8 +80,13 @@ class RobustNetworkStreamer:
                 backoff *= 2.0
             finally:
                 if ds_iter is not None:
-                    if hasattr(ds_iter, "close") and callable(ds_iter.close):
+                    if hasattr(ds_iter, "close") and callable(getattr(ds_iter, "close")):
                         try:
                             ds_iter.close()
+                        except Exception:
+                            pass
+                    if hasattr(ds_iter, "_ex_iterable") and hasattr(ds_iter._ex_iterable, "close") and callable(getattr(ds_iter._ex_iterable, "close")):
+                        try:
+                            ds_iter._ex_iterable.close()
                         except Exception:
                             pass

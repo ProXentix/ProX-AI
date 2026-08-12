@@ -15,8 +15,8 @@ from backend.datasets.config import (
 from backend.datasets.stratified_split import assign_stratified_split
 from backend.datasets.checkpoint import CorpusCheckpointManager
 from backend.datasets.sharded_writer import ShardedCorpusWriter
-from backend.datasets.proxpl_sources import load_approved_proxpl_corpus, verify_zero_repo_contamination
-from backend.datasets.leakage import DataLeakageChecker, verify_no_leakage
+from backend.datasets.categories import CANONICAL_CATEGORIES
+from backend.datasets.leakage import DataLeakageChecker, verify_no_leakage, verify_zero_repo_contamination
 from backend.datasets.quality import validate_code_syntax
 from backend.datasets.streaming import RobustNetworkStreamer
 from backend.tokenizer.tokenizer import ProXTokenizer
@@ -29,10 +29,13 @@ def test_programming_data_dirs_mapping():
     assert cpp_entry["subset"] == "data/c++"
 
 def test_target_config_validation():
+    assert "proxpl" not in TARGET_CONFIG["category_targets"]
+    assert "proxpl" not in CANONICAL_CATEGORIES
     assert validate_target_config(TARGET_CONFIG) is True
     scaled = get_scaled_target_config(100_000)
     assert scaled["target_total_tokens"] == 100_000
     assert sum(scaled["category_targets"].values()) == 100_000
+    assert "proxpl" not in scaled["category_targets"]
 
     invalid_config = {
         "target_total_tokens": 100,
@@ -52,6 +55,7 @@ def test_audit_dataset_sources():
     for r in audit_res:
         assert "dataset_name" in r
         assert "category" in r
+        assert r["category"] != "proxpl"
         assert "accessible" in r
 
 def test_deterministic_stratified_split():
@@ -77,7 +81,7 @@ def test_checkpoint_manager():
         )
         
         mgr2 = CorpusCheckpointManager(checkpoint_path=chk_file)
-        loaded = mgr2.load_checkpoint()
+        loaded = mgr2.load_checkpoint(expected_config_hash="hash123")
         assert loaded is True
         assert mgr2.get_category_tokens("general_natural_language") == 5000
         assert mgr2.is_category_complete("general_natural_language", 4000) is True
@@ -97,8 +101,8 @@ def test_sharded_corpus_writer():
 def test_zero_repository_contamination():
     clean_records = [
         {
-            "source_id": "proxpl_approved_spec.md_0",
-            "source_url": "https://github.com/ProgrammerKR/ProXPL",
+            "source_id": "external_clean_doc_0",
+            "source_url": "https://example.com/doc",
             "text": "fn main() {}"
         }
     ]
@@ -115,16 +119,10 @@ def test_zero_repository_contamination():
     with pytest.raises(ValueError):
         verify_zero_repo_contamination(dirty_records)
 
-def test_approved_proxpl_corpus_provenance():
-    tokenizer = ProXTokenizer()
-    records = load_approved_proxpl_corpus(tokenizer)
-    assert len(records) > 0
-    for r in records:
-        assert r["category"] == "proxpl"
-        assert r["language"] == "proxpl"
-        assert "sha256" in r
-        assert "permission_basis" in r
-        assert "approved_for_training" in r
+def test_no_proxpl_in_pipeline_categories():
+    assert "proxpl" not in CANONICAL_CATEGORIES
+    assert "proxpl" not in TARGET_CONFIG["category_targets"]
+    assert PROGRAMMING_DATA_DIRS["cpp"] == "data/c++"
 
 def test_syntax_warning_isolation():
     # String literal with invalid backslash escape '\s'

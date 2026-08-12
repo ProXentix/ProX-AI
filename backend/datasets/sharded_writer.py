@@ -95,7 +95,8 @@ class ShardedCorpusWriter:
             self.current_file = None
         if self._raw_file is not None:
             try:
-                self._raw_file.close()
+                if hasattr(self._raw_file, "closed") and not self._raw_file.closed:
+                    self._raw_file.close()
             except Exception:
                 pass
             self._raw_file = None

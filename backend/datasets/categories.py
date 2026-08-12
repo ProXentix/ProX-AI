@@ -7,14 +7,11 @@ class DataCategory(str, Enum):
     GENERAL_NATURAL_LANGUAGE = "general_natural_language"
     PROGRAMMING_LANGUAGES = "programming_languages"
     TECHNICAL_DOCUMENTATION = "technical_documentation"
-    PROXPL = "proxpl"
     MATHEMATICS_REASONING = "mathematics_reasoning"
-    STRUCTURED_TECHNICAL_TEXT = "structured_technical_text"
 
 CANONICAL_CATEGORIES = [c.value for c in DataCategory]
 
 EXTENSION_CATEGORY_MAP = {
-    ".proxpl": DataCategory.PROXPL,
     ".py": DataCategory.PROGRAMMING_LANGUAGES,
     ".js": DataCategory.PROGRAMMING_LANGUAGES,
     ".ts": DataCategory.PROGRAMMING_LANGUAGES,
@@ -26,14 +23,14 @@ EXTENSION_CATEGORY_MAP = {
     ".md": DataCategory.TECHNICAL_DOCUMENTATION,
     ".rst": DataCategory.TECHNICAL_DOCUMENTATION,
     ".tex": DataCategory.MATHEMATICS_REASONING,
-    ".json": DataCategory.STRUCTURED_TECHNICAL_TEXT,
-    ".yaml": DataCategory.STRUCTURED_TECHNICAL_TEXT,
-    ".xml": DataCategory.STRUCTURED_TECHNICAL_TEXT,
+    ".json": DataCategory.TECHNICAL_DOCUMENTATION,
+    ".yaml": DataCategory.TECHNICAL_DOCUMENTATION,
+    ".xml": DataCategory.TECHNICAL_DOCUMENTATION,
     ".txt": DataCategory.GENERAL_NATURAL_LANGUAGE,
 }
 
 def classify_document(text: str, file_path: str = "") -> DataCategory:
-    """Classifies a document into one of 6 canonical categories based on file extension and syntax heuristics."""
+    """Classifies a document into one of 4 canonical categories based on file extension and syntax heuristics."""
     if file_path:
         ext = os.path.splitext(file_path)[1].lower()
         if ext in EXTENSION_CATEGORY_MAP:
@@ -43,10 +40,6 @@ def classify_document(text: str, file_path: str = "") -> DataCategory:
     if not text:
         return DataCategory.GENERAL_NATURAL_LANGUAGE
 
-    # ProXPL specific heuristics
-    if "proxpl" in text.lower() or re.search(r"\bfn\s+main\s*\(\s*\)", text) or re.search(r"\b<proxpl_", text):
-        return DataCategory.PROXPL
-
     # Mathematics & Reasoning heuristics
     if re.search(r"\\(begin|end|frac|sum|int|sqrt|matrix|align)", text) or re.search(r"\b(Theorem|Proof|Lemma|Q\.E\.D\.)\b", text):
         return DataCategory.MATHEMATICS_REASONING
@@ -54,7 +47,7 @@ def classify_document(text: str, file_path: str = "") -> DataCategory:
     # Structured technical text heuristics
     stripped = text.strip()
     if (stripped.startswith("{") and stripped.endswith("}")) or (stripped.startswith("[") and stripped.endswith("]")):
-        return DataCategory.STRUCTURED_TECHNICAL_TEXT
+        return DataCategory.TECHNICAL_DOCUMENTATION
 
     # Code heuristics
     code_keywords = ["def ", "class ", "function ", "import ", "const ", "return ", "public static void "]

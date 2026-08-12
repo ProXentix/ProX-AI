@@ -5,7 +5,7 @@ from backend.datasets.manifest import DatasetManifestGenerator
 def test_dataset_manifest_generation():
     documents = [
         {"text": "Natural language document.", "format": "txt"},
-        {"text": "fn main() { let x: int = 10; }", "format": "proxpl"},
+        {"text": "# Technical Documentation\nStep 1: Install system.", "format": "md"},
         {"text": "def calculate(a, b):\n    return a + b", "format": "py"},
     ]
 
@@ -17,7 +17,8 @@ def test_dataset_manifest_generation():
     assert manifest["summary_statistics"]["clean_document_count"] == 3
     assert len(manifest["dataset_hash"]) == 64
     assert "category_distribution" in manifest
-    assert "proxpl" in manifest["category_distribution"]
+    assert "proxpl" not in manifest["category_distribution"]
+    assert "general_natural_language" in manifest["category_distribution"]
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         out_path = os.path.join(tmp_dir, "dataset_manifest.json")

@@ -1,7 +1,7 @@
 {
   "sources_version": "v0.1",
-  "creation_timestamp": "2026-08-12T08:30:32.890604+00:00",
-  "total_sources": 5,
+  "creation_timestamp": "2026-08-12T10:12:23.145385+00:00",
+  "total_sources": 4,
   "sources": [
     {
       "dataset_name": "FineWeb-Edu",
@@ -9,8 +9,8 @@
       "category": "general_natural_language",
       "language": "en",
       "license": "ODC-By 1.0 (Dataset) / Publisher Rights Preserved",
-      "retrieved_records": 1003,
-      "retrieved_tokens": 4508314,
+      "retrieved_records": 14,
+      "retrieved_tokens": 57600,
       "status": "VERIFIED"
     },
     {
@@ -19,8 +19,8 @@
       "category": "programming_languages",
       "language": "python",
       "license": "Apache-2.0 Open Source",
-      "retrieved_records": 423,
-      "retrieved_tokens": 3003284,
+      "retrieved_records": 5,
+      "retrieved_tokens": 30860,
       "status": "VERIFIED"
     },
     {
@@ -29,18 +29,8 @@
       "category": "technical_documentation",
       "language": "en",
       "license": "Apache-2.0 / Open Technical Documentation",
-      "retrieved_records": 706,
-      "retrieved_tokens": 1000413,
-      "status": "VERIFIED"
-    },
-    {
-      "dataset_name": "ProXPL Approved Corpus v0.1",
-      "dataset_id": "ProXPL Compiler Diagnostic Suite",
-      "category": "proxpl",
-      "language": "proxpl",
-      "license": "Apache-2.0 Open Source Specification",
-      "retrieved_records": 10,
-      "retrieved_tokens": 10898,
+      "retrieved_records": 11,
+      "retrieved_tokens": 15492,
       "status": "VERIFIED"
     },
     {
@@ -49,8 +39,8 @@
       "category": "mathematics_reasoning",
       "language": "math",
       "license": "ODC-By 1.0 (Dataset) / Common Crawl Terms Preserved",
-      "retrieved_records": 75,
-      "retrieved_tokens": 502024,
+      "retrieved_records": 1,
+      "retrieved_tokens": 7039,
       "status": "VERIFIED"
     }
   ]

@@ -70,23 +70,5 @@
     "known_limitations": "Subsampled to 5% target mixture for base pretraining",
     "allowed_for_training": true,
     "status": "VERIFIED"
-  },
-  {
-    "dataset_name": "ProXPL External Public Resources",
-    "provider": "ProX Language Project",
-    "dataset_id": "proxpl-external-spec",
-    "source_url": "N/A (External Public ProXPL Material)",
-    "dataset_revision": "v0.1",
-    "subset": "spec_and_examples",
-    "category": "proxpl",
-    "languages": ["proxpl"],
-    "license": "Open Specification",
-    "license_url": "N/A",
-    "terms_url": "N/A",
-    "retrieval_date": "2026-08-11",
-    "selection_reason": "Native ProXPL language specifications and standard examples",
-    "known_limitations": "Category marked NOT AVAILABLE if external public dataset is unpopulated",
-    "allowed_for_training": false,
-    "status": "NOT_AVAILABLE"
   }
 ]

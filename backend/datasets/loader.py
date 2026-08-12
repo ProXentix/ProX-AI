@@ -7,7 +7,7 @@ from backend.datasets.categories import classify_document, DataCategory
 class LocalDatasetLoader:
     def __init__(self, data_path: str):
         self.data_path = data_path
-        self.supported_exts = (".txt", ".jsonl", ".json", ".md", ".py", ".ts", ".js", ".c", ".cpp", ".proxpl", ".rs", ".go", ".rst")
+        self.supported_exts = (".txt", ".jsonl", ".json", ".md", ".py", ".ts", ".js", ".c", ".cpp", ".rs", ".go", ".rst")
 
     def _get_files(self) -> List[str]:
         if os.path.isfile(self.data_path):
