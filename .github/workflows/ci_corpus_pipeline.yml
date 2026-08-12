@@ -1,0 +1,53 @@
+name: ProX AI — Corpus Curation & Test Suite CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install PyTorch CPU & Project Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Run Pytest Suite
+        run: |
+          python -m pytest
+
+      - name: Run Data Curation & Pretraining Corpus Pipeline
+        run: |
+          python -m scripts.build_prox_corpus
+
+      - name: Verify Corpus Build Outputs & Manifest Integrity
+        run: |
+          ls -la prox_training_corpus/manifests/
+          ls -la prox_training_corpus/reports/
+          test -f prox_training_corpus/manifests/corpus_manifest_v0.1.json || (echo "ERROR: corpus_manifest_v0.1.json missing!" && exit 1)
+          test -f prox_training_corpus/manifests/sources_manifest.json || (echo "ERROR: sources_manifest.json missing!" && exit 1)
+          test -f prox_training_corpus/reports/CORPUS_BUILD_REPORT.md || (echo "ERROR: CORPUS_BUILD_REPORT.md missing!" && exit 1)
+
+      - name: Upload Build Reports & Manifest Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prox-corpus-reports-v0.1
+          path: |
+            prox_training_corpus/manifests/
+            prox_training_corpus/reports/
+          retention-days: 14

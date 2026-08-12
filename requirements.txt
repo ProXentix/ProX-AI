@@ -1,0 +1,23 @@
+# Core & Dataset Dependencies
+torch>=2.0.0
+datasets>=3.0.0
+huggingface_hub>=0.20.0
+pyarrow>=15.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# API & Web Services
+fastapi>=0.100.0
+uvicorn>=0.20.0
+pydantic>=2.0.0
+httpx>=0.25.0
+requests>=2.31.0
+PyYAML>=6.0
+
+# Tokenizer & Utils
+tokenizers>=0.15.0
+tiktoken>=0.5.0
+sentencepiece>=0.1.99
+
+# Testing
+pytest>=8.0.0

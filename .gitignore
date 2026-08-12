@@ -14,10 +14,17 @@ dist-ssr/
 *.log
 
 # Checkpoint outputs (large binary weights)
-# Keep tokenizer weights, but ignore large model run weights if necessary
 weights/neurix_100m_dry_run/
 weights/neurix_100m_resume_test/
 *.pt
+
+# Corpus Data (JSONL files - keep manifests & reports tracked)
+prox_training_corpus/raw/
+prox_training_corpus/processed/
+prox_training_corpus/deduplicated/
+prox_training_corpus/train/
+prox_training_corpus/validation/
+*.jsonl
 
 # IDE / OS
 .vscode/
