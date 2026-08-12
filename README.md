@@ -39,10 +39,9 @@ The pre-training corpus pipeline converts dataset ingestion from document-count 
 
 | Category Key | Target Percentage | Target Token Count | Primary Source Datasets | Provenance & License |
 | :--- | :--- | :--- | :--- | :--- |
-| `general_natural_language` | **45%** | **45,000,000** | FineWeb-Edu (`sample-10BT`, score $\ge 3$) / Wikipedia | ODC-By 1.0 / CC-BY-SA |
-| `programming_languages` | **30%** | **30,000,000** | The Stack Smol / CodeParrot Clean (Python, C, C++, JS, TS, Rust, Go, Java) | BigCode Terms / Apache-2.0 |
-| `technical_documentation` | **10%** | **10,000,000** | CodeXGlue NL-Code Search & AG News Sci/Tech | Apache-2.0 / Academic |
-| `proxpl` | **10%** | **10,000,000** | Official ProXPL Specifications, Stdlib Docs, Syntax Tutorials | Apache-2.0 Open Spec |
+| `general_natural_language` | **50%** | **50,000,000** | FineWeb-Edu (`sample-10BT`, score $\ge 3$) / Wikipedia | ODC-By 1.0 / CC-BY-SA |
+| `programming_languages` | **30%** | **30,000,000** | The Stack Smol / CodeParrot Clean (Python, C, C++ [`data/c++`], JS, TS, Rust, Go, Java) | BigCode Terms / Apache-2.0 |
+| `technical_documentation` | **15%** | **15,000,000** | CodeXGlue NL-Code Search & AG News Sci/Tech | Apache-2.0 / Academic |
 | `mathematics_reasoning` | **5%** | **5,000,000** | OpenWebMath (`open-web-math/open-web-math`) | ODC-By 1.0 / CC |
 
 ---
