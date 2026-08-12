@@ -19,14 +19,41 @@ class DataLeakageChecker:
                 leaked_hashes.append(h)
 
         # Near-duplicate leakage check
+        k_sample = 30
         train_ngrams = [extract_char_ngrams(d) for d in train_docs]
-        near_leaks = 0
+        train_lens = [len(s) for s in train_ngrams]
+        index: Dict[int, List[int]] = {}
+        for t_idx, t_set in enumerate(train_ngrams):
+            gram_hashes = sorted({hash(g) & 0xFFFFFFFF for g in t_set})[:k_sample]
+            for h in gram_hashes:
+                if h not in index:
+                    index[h] = []
+                index[h].append(t_idx)
 
+        near_leaks = 0
         for val_doc in val_docs:
             val_ngram = extract_char_ngrams(val_doc)
-            for t_ngram in train_ngrams:
-                sim = jaccard_similarity(val_ngram, t_ngram)
-                if sim >= self.near_dup_threshold:
+            vlen = len(val_ngram)
+            if vlen == 0:
+                continue
+
+            min_len = vlen * self.near_dup_threshold
+            max_len = vlen / self.near_dup_threshold
+
+            gram_hashes = sorted({hash(g) & 0xFFFFFFFF for g in val_ngram})[:k_sample]
+
+            candidates: Set[int] = set()
+            for h in gram_hashes:
+                if h in index:
+                    for idx in index[h]:
+                        if min_len <= train_lens[idx] <= max_len:
+                            candidates.add(idx)
+
+            for c_idx in candidates:
+                t_set = train_ngrams[c_idx]
+                inter = len(val_ngram & t_set)
+                union_len = vlen + train_lens[c_idx] - inter
+                if union_len > 0 and (inter / union_len) >= self.near_dup_threshold:
                     near_leaks += 1
                     break
 

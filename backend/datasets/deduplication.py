@@ -58,20 +58,52 @@ class DatasetDeduplicator:
         ngram_sets: List[Set[str]] = [extract_char_ngrams(doc, self.ngram_size) for doc in candidate_docs]
         retained: List[str] = []
         retained_sets: List[Set[str]] = []
+        retained_lens: List[int] = []
+        index: Dict[int, List[int]] = {}
         near_dups_count = 0
 
+        k_sample = 30  # Bottom-K min-hashes per document
+
         for doc, nset in zip(candidate_docs, ngram_sets):
+            nlen = len(nset)
+            if nlen == 0:
+                retained.append(doc)
+                retained_sets.append(nset)
+                retained_lens.append(0)
+                continue
+
+            min_len = nlen * self.near_dup_threshold
+            max_len = nlen / self.near_dup_threshold
+
+            gram_hashes = sorted({hash(g) & 0xFFFFFFFF for g in nset})[:k_sample]
+
+            candidates: Set[int] = set()
+            for h in gram_hashes:
+                if h in index:
+                    for idx in index[h]:
+                        if min_len <= retained_lens[idx] <= max_len:
+                            candidates.add(idx)
+
             is_near_dup = False
-            for rset in retained_sets:
-                sim = jaccard_similarity(nset, rset)
-                if sim >= self.near_dup_threshold:
+            for c_idx in candidates:
+                rset = retained_sets[c_idx]
+                inter = len(nset & rset)
+                union_len = nlen + retained_lens[c_idx] - inter
+                if union_len > 0 and (inter / union_len) >= self.near_dup_threshold:
                     is_near_dup = True
                     break
+
             if is_near_dup:
                 near_dups_count += 1
             else:
+                new_idx = len(retained)
                 retained.append(doc)
                 retained_sets.append(nset)
+                retained_lens.append(nlen)
+                for h in gram_hashes:
+                    if h not in index:
+                        index[h] = []
+                    index[h].append(new_idx)
 
         total_input = len(documents)
         total_removed = exact_dups + near_dups_count
