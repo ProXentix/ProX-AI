@@ -1,6 +1,6 @@
 # PROX TRAINING CORPUS v0.1 — Quality Filtering and Deduplication Report
 
-**Date:** August 11, 2026  
+**Date:** 2026-08-12 07:46 UTC  
 **Corpus Version:** v0.1  
 **Status:** PROCESSED & DEDUPLICATED  
 
@@ -18,15 +18,30 @@ The data pipeline applies 5 measurable quality filters:
 
 ---
 
-## 2. Deduplication Strategy
+## 2. Filtering Execution Statistics
 
-- **Exact SHA-256 Deduplication:** Identifies and strips bitwise identical documents within and across sources.
-- **Near-Duplicate Detection:** Computes character $5$-gram Jaccard similarity across documents ($\text{threshold} \ge 0.85$) to eliminate near-identical copies across different dataset sources.
+- **Input Documents:** 7,300
+- **Clean Documents:** 6,430
+- **Empty Filtered:** 0
+- **Length Filtered:** 19
+- **Repetition Filtered:** 818
+- **Syntax Error Filtered:** 0
 
 ---
 
-## 3. Leakage Guard & Train/Val Partitioning
+## 3. Deduplication Strategy & Results
+
+- **Exact SHA-256 Deduplication:** 0 exact duplicate documents removed.
+- **Near-Duplicate Detection (Jaccard 0.85):** 0 near-duplicate documents removed.
+- **Total Duplicates Removed:** 0
+- **Remaining Unique Documents:** 6,428
+
+---
+
+## 4. Leakage Guard & Train/Val Partitioning
 
 - **Partition Ratio:** 90% Training (`train/train.jsonl`) / 10% Validation (`validation/val.jsonl`).
-- **Leakage Check Result:** Calculated exact SHA-256 and $5$-gram Jaccard similarity across training and validation splits after deduplication.
-- **Leakage Status:** **`0% LEAKAGE (CLEAN)`**. Zero overlapping documents detected between splits.
+- **Leakage Check Result:** Exact SHA-256 and 5-gram Jaccard similarity across training and validation splits.
+- **Exact Leaks:** 0
+- **Near Leaks:** 0
+- **Leakage Status:** **0% LEAKAGE (CLEAN)**.

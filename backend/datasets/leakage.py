@@ -72,3 +72,17 @@ class DataLeakageChecker:
         }
 
         return report
+
+def verify_no_leakage(leakage_report: Dict[str, Any], raise_on_leak: bool = True) -> bool:
+    """Verifies that no leakage occurred between train and validation splits."""
+    if not leakage_report.get("is_clean", True):
+        msg = (
+            f"DATA LEAKAGE DETECTED: {leakage_report.get('exact_leak_count', 0)} exact leaks and "
+            f"{leakage_report.get('near_leak_count', 0)} near-duplicate leaks between train and validation."
+        )
+        if raise_on_leak:
+            raise RuntimeError(msg)
+        print(f"[Leakage Checker] WARNING: {msg}")
+        return False
+    return True
+

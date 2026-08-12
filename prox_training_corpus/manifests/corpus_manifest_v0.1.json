@@ -1,0 +1,92 @@
+{
+  "corpus_version": "v0.1",
+  "target_tokens": 10000000,
+  "actual_tokens": 9019043,
+  "train_tokens": 8117138,
+  "validation_tokens": 901905,
+  "creation_timestamp": "2026-08-12T08:22:30.448850+00:00",
+  "corpus_hash": "118b07b0da667cf79e9e6e9ab27c6bebb34e5887294c509f091e7af3372fc89e",
+  "summary_statistics": {
+    "raw_streamed_document_count": 2291,
+    "accepted_document_count": 2210,
+    "total_usable_tokens": 9019043,
+    "train_tokens": 8117138,
+    "val_tokens": 901905,
+    "target_phase_a_tokens": 10000000,
+    "target_reached": false
+  },
+  "category_distribution": {
+    "general_natural_language": {
+      "status": "AVAILABLE",
+      "document_count": 1003,
+      "tokens": 4508314,
+      "target_tokens": 4500000,
+      "actual_percentage": 49.99
+    },
+    "programming_languages": {
+      "status": "AVAILABLE",
+      "document_count": 423,
+      "tokens": 3003284,
+      "target_tokens": 3000000,
+      "actual_percentage": 33.3
+    },
+    "technical_documentation": {
+      "status": "AVAILABLE",
+      "document_count": 706,
+      "tokens": 1000413,
+      "target_tokens": 1000000,
+      "actual_percentage": 11.09
+    },
+    "proxpl": {
+      "status": "AVAILABLE",
+      "document_count": 3,
+      "tokens": 5008,
+      "target_tokens": 1000000,
+      "actual_percentage": 0.06
+    },
+    "mathematics_reasoning": {
+      "status": "AVAILABLE",
+      "document_count": 75,
+      "tokens": 502024,
+      "target_tokens": 500000,
+      "actual_percentage": 5.57
+    },
+    "structured_technical_text": {
+      "status": "NOT AVAILABLE",
+      "document_count": 0,
+      "tokens": 0,
+      "target_tokens": 0,
+      "actual_percentage": 0.0
+    }
+  },
+  "language_distribution": {
+    "en": 5508727,
+    "python": 3003284,
+    "proxpl": 5008,
+    "math": 502024
+  },
+  "quality_filtering_statistics": {
+    "streamed_documents": 2291,
+    "accepted_documents": 2210,
+    "rejected_documents": 81
+  },
+  "leakage": {
+    "train_document_count": 1000,
+    "val_document_count": 219,
+    "exact_leak_count": 0,
+    "near_leak_count": 0,
+    "total_leak_count": 0,
+    "leakage_rate_percent": 0.0,
+    "leaked_document_hashes": [],
+    "is_clean": true
+  },
+  "tokenizer": {
+    "name": "ProX Tokenizer DEV",
+    "sha256": "ae03bfc8edfde3fab00b13a6cd65312a30bcf470ff9182fd7d405ad49103e0a1"
+  },
+  "build": {
+    "timestamp": "2026-08-12T08:22:30.448952+00:00",
+    "pipeline_version": "v0.1",
+    "configuration_hash": "f31dc4992e2e4209fb75d8a1f3f7f9cbafe6489198534f25cf264c33da55a540"
+  }
+}

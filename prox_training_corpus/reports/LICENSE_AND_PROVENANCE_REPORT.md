@@ -1,6 +1,6 @@
 # PROX TRAINING CORPUS v0.1 — License and Provenance Report
 
-**Date:** August 11, 2026  
+**Date:** 2026-08-12 07:46 UTC  
 **Corpus Version:** v0.1  
 **Status:** COMPLIANT & VERIFIED  
 
@@ -21,8 +21,8 @@ The **ProX Training Corpus v0.1** enforces multi-layered license and provenance 
 | Dataset Name | Dataset ID / Source URL | Subset | Category | License & Terms | License URL | Allowed for Training | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **FineWeb-Edu** | `HuggingFaceFW/fineweb-edu` | `sample-10BT` (score $\ge 3$) | `general_natural_language` | **ODC-By 1.0** (Dataset Level) + Publisher Terms | [ODC-By 1.0](https://opendatacommons.org/licenses/by/1-0/) | **Yes** | `VERIFIED` |
-| **The Stack Smol** | `bigcode/the-stack-smol` | `data/python, c, cpp, js, ts, rust, go, java` | `programming_languages` | **BigCode Terms** + Permissive Repo Licenses (MIT, Apache-2.0, BSD) | [The Stack License](https://huggingface.co/datasets/bigcode/the-stack) | **Yes** | `VERIFIED` |
-| **WikiHow** | `wikihow` | `all` | `technical_documentation` | **CC-BY-NC-SA 3.0** | [CC-BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) | **Yes** | `VERIFIED` |
+| **The Stack Smol / CodeParrot** | `bigcode/the-stack-smol` / `codeparrot/codeparrot-clean-train` | `python, c, cpp, js, ts, rust, go, java` | `programming_languages` | **BigCode Terms** / Apache-2.0 | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) | **Yes** | `VERIFIED` |
+| **CodeXGlue / AG News** | `google/code_x_glue_tc_nl_code_search_adv` | `train` | `technical_documentation` | **Apache-2.0** / Open Technical Docs | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) | **Yes** | `VERIFIED` |
 | **OpenWebMath** | `open-web-math/open-web-math` | `plain_text` | `mathematics_reasoning` | **ODC-By 1.0** + Common Crawl Terms | [ODC-By 1.0](https://opendatacommons.org/licenses/by/1-0/) | **Yes** | `VERIFIED` |
 | **ProXPL External Public** | `proxpl-external-spec` | `spec_and_examples` | `proxpl` | Open Specification | N/A | **No** | `NOT_AVAILABLE` |
 

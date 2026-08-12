@@ -1,0 +1,29 @@
+{
+  "pipeline_version": "v0.1",
+  "configuration_hash": "f31dc4992e2e4209fb75d8a1f3f7f9cbafe6489198534f25cf264c33da55a540",
+  "last_updated": "2026-08-12T08:22:24.778529+00:00",
+  "category_tokens": {
+    "general_natural_language": 4508314,
+    "programming_languages": 3003284,
+    "technical_documentation": 1000413,
+    "proxpl": 5008,
+    "mathematics_reasoning": 502024,
+    "structured_technical_text": 0
+  },
+  "category_docs": {
+    "general_natural_language": 1003,
+    "programming_languages": 423,
+    "technical_documentation": 706,
+    "proxpl": 3,
+    "mathematics_reasoning": 75,
+    "structured_technical_text": 0
+  },
+  "language_tokens": {
+    "en": 5508727,
+    "python": 3003284,
+    "proxpl": 5008,
+    "math": 502024
+  },
+  "completed_datasets": [],
+  "seen_sha256_count": 2210
+}

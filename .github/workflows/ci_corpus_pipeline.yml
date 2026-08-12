@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Data Curation & Pretraining Corpus Pipeline
         run: |
-          python -m scripts.build_prox_corpus
+          python -m scripts.build_prox_corpus --target-tokens 100000
 
       - name: Verify Corpus Build Outputs & Manifest Integrity
         run: |
