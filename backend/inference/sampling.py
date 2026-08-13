@@ -5,11 +5,13 @@ from typing import List, Optional
 def apply_repetition_penalty(logits: torch.Tensor, generated_tokens: List[int], penalty: float = 1.1) -> torch.Tensor:
     if penalty == 1.0 or not generated_tokens:
         return logits
+    vocab_size = logits.size(-1)
     for token in set(generated_tokens):
-        if logits[0, token] < 0:
-            logits[0, token] *= penalty
-        else:
-            logits[0, token] /= penalty
+        if token < vocab_size:
+            if logits[0, token] < 0:
+                logits[0, token] *= penalty
+            else:
+                logits[0, token] /= penalty
     return logits
 
 def sample_next_token(
@@ -18,10 +20,19 @@ def sample_next_token(
     top_k: int = 40,
     top_p: float = 0.9,
     repetition_penalty: float = 1.1,
-    generated_tokens: Optional[List[int]] = None
+    generated_tokens: Optional[List[int]] = None,
+    max_vocab_size: Optional[int] = None,
+    valid_token_mask: Optional[torch.Tensor] = None
 ) -> int:
     logits = logits.clone()
-    
+
+    if max_vocab_size is not None and logits.size(-1) > max_vocab_size:
+        logits = logits[:, :max_vocab_size]
+
+    if valid_token_mask is not None:
+        mask = valid_token_mask[:logits.size(-1)]
+        logits[0, ~mask] = -float("Inf")
+
     if generated_tokens and repetition_penalty > 1.0:
         logits = apply_repetition_penalty(logits, generated_tokens, repetition_penalty)
 

@@ -98,10 +98,11 @@ export const ChatArea: React.FC = () => {
           updateMessage(activeConversationId, assistantMsg.id, { isStreaming: false });
           setStreaming(false, null);
         },
-        onError: () => {
+        onError: (errMessage) => {
           updateMessage(activeConversationId, assistantMsg.id, {
             isStreaming: false,
             isError: true,
+            content: errMessage || 'Neurix is currently unavailable. Please try again shortly.'
           });
           setStreaming(false, null);
         },

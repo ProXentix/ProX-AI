@@ -32,7 +32,7 @@ async def chat_completions(request: Request):
     last_prompt = messages[-1].get("content", "")
 
     return StreamingResponse(
-        registry.generate_stream(model_id, last_prompt),
+        registry.generate_stream(model_id, last_prompt, messages=messages),
         media_type="text/event-stream"
     )
 

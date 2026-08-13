@@ -142,7 +142,8 @@ export const useChatStore = create<ChatState>()(
 
       fetchModels: async () => {
         try {
-          const res = await fetch('http://localhost:3001/v1/models');
+          const apiBase = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+          const res = await fetch(`${apiBase}/v1/models`);
           if (res.ok) {
             const json = await res.json();
             const fetchedModels = json.data.map((m: any) => ({

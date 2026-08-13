@@ -14,6 +14,16 @@ class GenerationEngine:
         self.model.to(self.device)
         self.model.eval()
 
+        vocab_size = self.tokenizer.vocab_size
+        self.valid_token_mask = torch.zeros(vocab_size, dtype=torch.bool)
+        for tid in range(vocab_size):
+            decoded = self.tokenizer.decode([tid])
+            if decoded and "\ufffd" not in decoded:
+                self.valid_token_mask[tid] = True
+
+        if not self.valid_token_mask.any():
+            self.valid_token_mask[:] = True
+
     def generate(
         self,
         prompt: str,
@@ -57,7 +67,9 @@ class GenerationEngine:
                     top_k=top_k,
                     top_p=top_p,
                     repetition_penalty=repetition_penalty,
-                    generated_tokens=generated_tokens
+                    generated_tokens=generated_tokens,
+                    max_vocab_size=self.tokenizer.vocab_size,
+                    valid_token_mask=self.valid_token_mask
                 )
                 generated_tokens.append(next_token)
 
@@ -77,13 +89,15 @@ class GenerationEngine:
                         top_k=top_k,
                         top_p=top_p,
                         repetition_penalty=repetition_penalty,
-                        generated_tokens=generated_tokens
+                        generated_tokens=generated_tokens,
+                        max_vocab_size=self.tokenizer.vocab_size,
+                        valid_token_mask=self.valid_token_mask
                     )
                     generated_tokens.append(next_token)
                     start_pos += 1
                     curr_input = torch.tensor([[next_token]], dtype=torch.long, device=self.device)
             else:
-                # Standard generation without KV cache (recomputes full sequence per step)
+                # Standard generation without KV cache
                 curr_tensor = input_tensor
                 for _ in range(max_new_tokens):
                     logits = self.model(curr_tensor)
@@ -94,7 +108,9 @@ class GenerationEngine:
                         top_k=top_k,
                         top_p=top_p,
                         repetition_penalty=repetition_penalty,
-                        generated_tokens=generated_tokens
+                        generated_tokens=generated_tokens,
+                        max_vocab_size=self.tokenizer.vocab_size,
+                        valid_token_mask=self.valid_token_mask
                     )
                     if next_token == self.tokenizer.eos_token_id:
                         break
@@ -149,6 +165,7 @@ class GenerationEngine:
         )
 
         generated_tokens = []
+        prev_text = ""
 
         with torch.no_grad():
             logits = self.model(input_tensor, kv_caches=kv_caches, start_pos=0)
@@ -159,10 +176,17 @@ class GenerationEngine:
                 top_k=top_k,
                 top_p=top_p,
                 repetition_penalty=repetition_penalty,
-                generated_tokens=generated_tokens
+                generated_tokens=generated_tokens,
+                max_vocab_size=self.tokenizer.vocab_size,
+                valid_token_mask=self.valid_token_mask
             )
             generated_tokens.append(next_token)
-            yield self.tokenizer.decode([next_token])
+
+            full_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+            delta = full_text[len(prev_text):]
+            if delta:
+                prev_text = full_text
+                yield delta
 
             start_pos = seq_len
             curr_input = torch.tensor([[next_token]], dtype=torch.long, device=self.device)
@@ -179,10 +203,17 @@ class GenerationEngine:
                     top_k=top_k,
                     top_p=top_p,
                     repetition_penalty=repetition_penalty,
-                    generated_tokens=generated_tokens
+                    generated_tokens=generated_tokens,
+                    max_vocab_size=self.tokenizer.vocab_size,
+                    valid_token_mask=self.valid_token_mask
                 )
                 generated_tokens.append(next_token)
-                yield self.tokenizer.decode([next_token])
+
+                full_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+                delta = full_text[len(prev_text):]
+                if delta:
+                    prev_text = full_text
+                    yield delta
 
                 start_pos += 1
                 curr_input = torch.tensor([[next_token]], dtype=torch.long, device=self.device)
