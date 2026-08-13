@@ -35,14 +35,27 @@ def main():
         m_dict = yaml_raw.get("model", {})
         t_dict = yaml_raw.get("training", {})
         c_dict = yaml_raw.get("checkpoint", {})
+        d_dict = yaml_raw.get("data", {})
 
         model_config = ModelConfig(**m_dict)
         training_config = TrainingConfig(**t_dict)
         checkpoint_config = CheckpointConfig(**c_dict)
+
+        if args.dataset == "./data/smoke_test.jsonl" and d_dict.get("train_dataset"):
+            args.dataset = d_dict["train_dataset"]
     else:
         model_config = get_config(args.model)
         training_config = TrainingConfig()
         checkpoint_config = CheckpointConfig(output_dir=f"./weights/{args.model}")
+
+    # Fallback dataset resolution
+    if not os.path.exists(args.dataset):
+        if os.path.exists("prox_training_corpus/train") and os.listdir("prox_training_corpus/train"):
+            print(f"[ProX Training] Path '{args.dataset}' not found. Defaulting to built corpus at 'prox_training_corpus/train'")
+            args.dataset = "prox_training_corpus/train"
+        elif os.path.exists("./data/smoke_test.jsonl"):
+            print(f"[ProX Training] Path '{args.dataset}' not found. Defaulting to './data/smoke_test.jsonl'")
+            args.dataset = "./data/smoke_test.jsonl"
 
     if args.resume and os.path.exists(args.resume):
         try:
@@ -73,6 +86,7 @@ def main():
     print(f"  Tokenizer Path:   {args.tokenizer}")
     print(f"  Target Max Steps: {training_config.max_steps}")
     print(f"  Output Dir:       {checkpoint_config.output_dir}")
+
 
     # Load frozen tokenizer artifact (disallow fallback dynamic training)
     tokenizer = ProXTokenizer(tokenizer_path=args.tokenizer, allow_fallback=False)

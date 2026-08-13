@@ -237,3 +237,9 @@ class NeurixTrainer:
                     break
 
         print("[Neurix Trainer] Training loop completed successfully.")
+
+
+if __name__ == "__main__":
+    from backend.training.train import main
+    main()
+

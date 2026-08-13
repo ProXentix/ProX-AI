@@ -195,7 +195,7 @@ Run this in Colab Cell 7:
 
 ```python
 # Cell 7: Launch GPU Accelerated Model Pre-Training
-!python -m backend.training.trainer --config configs/neurix-100m-training.yaml
+!python -m backend.training.train --config configs/neurix-100m-training.yaml
 ```
 
 During training, the PyTorch engine outputs loss metrics, throughput (tokens/sec), VRAM utilization, and saves model checkpoints to `weights/neurix-100m/`.

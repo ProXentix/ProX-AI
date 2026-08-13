@@ -16,6 +16,7 @@ dist-ssr/
 # Checkpoint outputs (large binary weights)
 weights/neurix_100m_dry_run/
 weights/neurix_100m_resume_test/
+weights/neurix_100m_pretrain/
 *.pt
 
 # Corpus Data (JSONL files - keep manifests & reports tracked)

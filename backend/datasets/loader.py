@@ -7,7 +7,7 @@ from backend.datasets.categories import classify_document, DataCategory
 class LocalDatasetLoader:
     def __init__(self, data_path: str):
         self.data_path = data_path
-        self.supported_exts = (".txt", ".jsonl", ".json", ".md", ".py", ".ts", ".js", ".c", ".cpp", ".rs", ".go", ".rst")
+        self.supported_exts = (".txt", ".jsonl", ".json", ".md", ".py", ".ts", ".js", ".c", ".cpp", ".rs", ".go", ".rst", ".zst")
 
     def _get_files(self) -> List[str]:
         if os.path.isfile(self.data_path):
@@ -16,7 +16,7 @@ class LocalDatasetLoader:
             files = []
             for ext in self.supported_exts:
                 files.extend(glob.glob(os.path.join(self.data_path, f"**/*{ext}"), recursive=True))
-            return files
+            return sorted(list(set(files)))
         else:
             raise FileNotFoundError(f"Dataset path {self.data_path} not found.")
 
@@ -27,7 +27,29 @@ class LocalDatasetLoader:
         for file_path in files:
             ext = os.path.splitext(file_path)[1].lower()
             try:
-                if file_path.endswith(".jsonl"):
+                if file_path.endswith(".zst"):
+                    import zstandard as zstd
+                    import io
+                    with open(file_path, "rb") as fh:
+                        dctx = zstd.ZstdDecompressor()
+                        stream_reader = dctx.stream_reader(fh)
+                        text_stream = io.TextIOWrapper(stream_reader, encoding="utf-8", errors="ignore")
+                        for line in text_stream:
+                            line = line.strip()
+                            if line:
+                                item = json.loads(line)
+                                text = item.get("text", "") if isinstance(item, dict) else str(item)
+                                if text:
+                                    cat = classify_document(text, file_path)
+                                    documents.append({
+                                        "text": text,
+                                        "file_path": file_path,
+                                        "category": cat.value,
+                                        "format": "zst",
+                                        "bytes": len(text.encode("utf-8")),
+                                    })
+                elif file_path.endswith(".jsonl"):
+
                     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         for line in f:
                             line = line.strip()
