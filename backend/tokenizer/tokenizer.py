@@ -91,18 +91,22 @@ class ProXTokenizer:
 
     @property
     def pad_token_id(self) -> int:
-        return self.tokenizer.token_to_id(self.config.pad_token) or 0
+        res = self.tokenizer.token_to_id(self.config.pad_token)
+        return res if res is not None else 0
 
     @property
     def bos_token_id(self) -> int:
-        return self.tokenizer.token_to_id(self.config.bos_token) or 1
+        res = self.tokenizer.token_to_id(self.config.bos_token)
+        return res if res is not None else 1
 
     @property
     def eos_token_id(self) -> int:
-        return self.tokenizer.token_to_id(self.config.eos_token) or 2
+        res = self.tokenizer.token_to_id(self.config.eos_token)
+        return res if res is not None else 2
 
     @property
     def unk_token_id(self) -> int:
-        return self.tokenizer.token_to_id(self.config.unk_token) or 3
+        res = self.tokenizer.token_to_id(self.config.unk_token)
+        return res if res is not None else 3
 
 tokenizer = ProXTokenizer()

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { PanelLeft, SquarePen } from 'lucide-react';
 import { useChatStore } from '../../store/chatStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -34,28 +34,16 @@ export const ChatArea: React.FC = () => {
   const activeConv = conversations.find((c) => c.id === activeConversationId);
   const messages = activeConv?.messages || [];
 
+  const lastMessageContent = messages[messages.length - 1]?.content;
+
   // Auto scroll effect
   useEffect(() => {
     if (autoScrollEnabled && messages.length > 0) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages.length, messages[messages.length - 1]?.content, autoScrollEnabled]);
+  }, [messages.length, lastMessageContent, autoScrollEnabled]);
 
-  // Listen for prompt send event (e.g. from Explore Page)
-  useEffect(() => {
-    const handleSendPromptEvent = (e: Event) => {
-      const customEv = e as CustomEvent<{ text: string }>;
-      if (customEv.detail?.text) {
-        handleSendMessage(customEv.detail.text, []);
-      }
-    };
-    window.addEventListener('prox:send-prompt', handleSendPromptEvent);
-    return () => {
-      window.removeEventListener('prox:send-prompt', handleSendPromptEvent);
-    };
-  }, [activeConversationId]);
-
-  const handleSendMessage = async (text: string, attachments: Attachment[]) => {
+  const handleSendMessage = useCallback(async (text: string, attachments: Attachment[]) => {
     if (!activeConversationId) return;
 
     // 1. Add User Message
@@ -120,7 +108,21 @@ export const ChatArea: React.FC = () => {
       },
       abortControllerRef.current.signal
     );
-  };
+  }, [activeConversationId, activeModelId, webSearchEnabled, addMessage, setStreaming, activeConv, updateMessage, updateMessageContent]);
+
+  // Listen for prompt send event (e.g. from Explore Page)
+  useEffect(() => {
+    const handleSendPromptEvent = (e: Event) => {
+      const customEv = e as CustomEvent<{ text: string }>;
+      if (customEv.detail?.text) {
+        handleSendMessage(customEv.detail.text, []);
+      }
+    };
+    window.addEventListener('prox:send-prompt', handleSendPromptEvent);
+    return () => {
+      window.removeEventListener('prox:send-prompt', handleSendPromptEvent);
+    };
+  }, [activeConversationId, handleSendMessage]);
 
   const handleStopGeneration = () => {
     if (abortControllerRef.current) {

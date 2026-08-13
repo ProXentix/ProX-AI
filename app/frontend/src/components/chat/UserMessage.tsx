@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pencil, Check, X, User, Paperclip, Copy, Share2 } from 'lucide-react';
+import { Pencil, Check, User, Paperclip, Copy, Share2 } from 'lucide-react';
 import { Message } from '../../types/chat';
 import { useChatStore } from '../../store/chatStore';
 import { Tooltip } from '../ui/Tooltip';

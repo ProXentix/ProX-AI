@@ -16,7 +16,6 @@ import { UserProfile } from './UserProfile';
 import { groupConversationsByDate } from '../../utils/formatters';
 import { Tooltip } from '../ui/Tooltip';
 import { Modal } from '../ui/Modal';
-import { ModelSelector } from '../ui/ModelSelector';
 import { toast } from 'sonner';
 
 export const Sidebar: React.FC = () => {
@@ -27,7 +26,6 @@ export const Sidebar: React.FC = () => {
     createNewConversation,
     setSearchModalOpen,
     setSavedPromptsModalOpen,
-    setSettingsModalOpen,
     setExploreOpen,
     setAgentsPageOpen,
     setProjectsOpen,
@@ -35,7 +33,7 @@ export const Sidebar: React.FC = () => {
     addFolder,
   } = useChatStore();
   
-  const [showProjects, setShowProjects] = useState(false);
+  const [showProjects, _setShowProjects] = useState(false);
   const [createFolderModalOpen, setCreateFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
@@ -223,7 +221,7 @@ export const Sidebar: React.FC = () => {
 
             {/* Scrollable Recents List */}
             <div className="flex-1 overflow-y-auto px-2 space-y-0.5 py-1">
-              {Object.entries(grouped).map(([groupName, items]) => {
+              {Object.entries(grouped).map(([_, items]) => {
                 if (items.length === 0) return null;
                 return items.map((c) => (
                   <ConversationItem key={c.id} conversation={c} />

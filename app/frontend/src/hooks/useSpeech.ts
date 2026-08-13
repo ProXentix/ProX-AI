@@ -30,7 +30,7 @@ export function useSpeech() {
       const cleanText = text
         .replace(/```[\s\S]*?```/g, 'Code block omitted.')
         .replace(/`([^`]+)`/g, '$1')
-        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
         .replace(/[#*_~$]/g, '')
         .trim();
 

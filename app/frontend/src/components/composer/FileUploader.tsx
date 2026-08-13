@@ -12,7 +12,7 @@ interface FileUploaderProps {
 }
 
 export const FileUploader: React.FC<FileUploaderProps> = ({
-  attachments,
+  attachments: _attachments,
   onAddAttachment,
   onInsertPromptPrefix,
 }) => {

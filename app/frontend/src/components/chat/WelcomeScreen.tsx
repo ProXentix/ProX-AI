@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Code2, BrainCircuit, PenTool, Zap, ArrowRight, Command } from 'lucide-react';
+import { Code2, BrainCircuit, PenTool, Zap, ArrowRight, Command } from 'lucide-react';
 import { useChatStore } from '../../store/chatStore';
 import { AI_MODELS } from '../../constants/models';
 

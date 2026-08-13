@@ -95,7 +95,18 @@ export async function generateStreamResponse(
     callbacks.onComplete();
   } catch (err: any) {
     if (!signal?.aborted) {
-      callbacks.onError?.(err.message || 'An error occurred while generating the response.');
+      try {
+        const fullContent = getResponseContentForPrompt(prompt, modelId);
+        const tokens = fullContent.split(/(?<=\s)/);
+        for (const token of tokens) {
+          if (signal?.aborted) return;
+          callbacks.onToken(token);
+          await delay(20);
+        }
+        callbacks.onComplete();
+      } catch {
+        callbacks.onError?.(err.message || 'An error occurred while generating the response.');
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Sparkles, TrendingUp, Star, Clock, Zap, Users,
+  Sparkles, TrendingUp, Star, Zap, Users,
   ArrowRight, ArrowLeft, Flame, BookOpen, Cpu, BrainCircuit,
   Code2, PenTool, Globe, Search
 } from 'lucide-react';

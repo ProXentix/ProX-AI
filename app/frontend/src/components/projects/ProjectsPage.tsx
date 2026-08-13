@@ -34,7 +34,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onClose, onStartChat
   // Create Project Modal State
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [projectName, setProjectName] = useState('');
-  const [memoryOption, setMemoryOption] = useState('Default memory');
+  const [memoryOption, _setMemoryOption] = useState('Default memory');
 
   const { projects, addProject, deleteProject, conversations } = useChatStore();
 

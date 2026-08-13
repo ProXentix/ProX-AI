@@ -144,7 +144,7 @@ class ModelRegistry:
         model.eval()
         input_ids = tokenizer.encode(prompt)
         if not input_ids:
-            input_ids = [0]
+            input_ids = [tokenizer.bos_token_id]
 
         input_tensor = torch.tensor([input_ids], dtype=torch.long, device=self.device)
 

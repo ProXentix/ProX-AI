@@ -103,7 +103,14 @@ class DatasetQualityPipeline:
         dedup_res = self.deduplicator.deduplicate_near(raw_texts)
         retained_texts = set(dedup_res["unique_documents"])
 
-        final_docs = [r for r in clean_records if r["text"] in retained_texts]
+        seen_texts = set()
+        final_docs = []
+        for r in clean_records:
+            t = r["text"]
+            if t in retained_texts and t not in seen_texts:
+                seen_texts.add(t)
+                final_docs.append(r)
+
         doc_lengths = [len(d["text"]) for d in final_docs] or [0]
 
         total_input = len(documents)

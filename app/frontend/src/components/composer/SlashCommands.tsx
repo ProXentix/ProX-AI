@@ -8,7 +8,7 @@ export interface SlashCommand {
   icon: React.ReactNode;
 }
 
-export const SLASH_COMMANDS: SlashCommand[] = [
+const SLASH_COMMANDS: SlashCommand[] = [
   {
     command: '/code',
     description: 'Write production-ready TypeScript code snippet',
