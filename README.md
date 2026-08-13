@@ -184,7 +184,7 @@ Run this in Colab Cell 6:
 
 ```python
 # Cell 6: Train BPE Tokenizer on Built Corpus
-!python -m backend.tokenizer.train_tokenizer --data-dir prox_training_corpus/train --output weights/tokenizer/tokenizer.json --vocab-size 32000
+!python -m backend.tokenizer.train_tokenizer --dataset prox_training_corpus/train --output weights/tokenizer/tokenizer.json --vocab-size 32000
 ```
 
 ---
