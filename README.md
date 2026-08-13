@@ -359,11 +359,12 @@ if not os.path.exists("/kaggle/working/ProX-AI"):
 
 # Verify PyTorch XLA TPU Detection
 import torch
-import torch_xla.core.xla_model as xm
-device = xm.xla_device()
-print("⚡ TPU Accelerator Detected & Ready:", device)
-```
-    print("TPU Initialization Info:", e)
+try:
+    import torch_xla.core.xla_model as xm
+    device = xm.xla_device()
+    print("⚡ TPU Accelerator Detected & Ready:", device)
+except Exception as e:
+    print("TPU Initialization Note:", e)
 ```
 
 3. Then run Cells 2 through 6 as normal:
