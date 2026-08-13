@@ -58,7 +58,11 @@ class NeurixTrainer:
         self.dataset_path = dataset_path
 
         device_info = get_device_info()
-        self.device = torch.device(device_info["device"])
+        if device_info.get("tpu_available"):
+            import torch_xla.core.xla_model as xm
+            self.device = xm.xla_device()
+        else:
+            self.device = torch.device(device_info["device"])
         self.model.to(self.device)
 
         self.optimizer = torch.optim.AdamW(
@@ -202,7 +206,11 @@ class NeurixTrainer:
                         self.scaler.update()
                     else:
                         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.t_config.gradient_clip)
-                        self.optimizer.step()
+                        if self.device.type == "xla":
+                            import torch_xla.core.xla_model as xm
+                            xm.optimizer_step(self.optimizer)
+                        else:
+                            self.optimizer.step()
 
                     self.scheduler.step()
                     self.optimizer.zero_grad()

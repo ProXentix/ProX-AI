@@ -10,23 +10,36 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 def get_device_info():
-    cuda_available = torch.cuda.is_available()
-    device = torch.device("cuda" if cuda_available else "cpu")
-    
+    tpu_available = False
+    device_str = "cpu"
+    tpu_name = None
+
+    try:
+        import torch_xla.core.xla_model as xm
+        xla_dev = xm.xla_device()
+        device_str = str(xla_dev)
+        tpu_available = True
+        tpu_name = f"Kaggle / Google TPU ({xla_dev})"
+    except Exception:
+        tpu_available = False
+
+    if not tpu_available:
+        cuda_available = torch.cuda.is_available()
+        device_str = "cuda" if cuda_available else "cpu"
+    else:
+        cuda_available = False
+
     system_ram = round(psutil.virtual_memory().total / (1024 ** 3), 2) if HAS_PSUTIL else "N/A"
 
     info = {
-        "device": str(device),
+        "device": device_str,
         "cuda_available": cuda_available,
-        "gpu_name": None,
-        "gpu_vram_gb": 0.0,
+        "tpu_available": tpu_available,
+        "gpu_name": tpu_name if tpu_available else (torch.cuda.get_device_name(0) if cuda_available else None),
+        "gpu_vram_gb": round(torch.cuda.get_device_properties(0).total_memory / (1024 ** 3), 2) if cuda_available else 0.0,
         "system_ram_gb": system_ram,
         "pytorch_version": torch.__version__,
     }
-
-    if cuda_available:
-        info["gpu_name"] = torch.cuda.get_device_name(0)
-        info["gpu_vram_gb"] = round(torch.cuda.get_device_properties(0).total_memory / (1024 ** 3), 2)
 
     return info
 

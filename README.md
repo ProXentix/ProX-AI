@@ -329,6 +329,45 @@ print("Checkpoints saved to: /kaggle/working/neurix-100m-weights.zip")
 
 ---
 
+### ⚡ Option B: Kaggle TPU v5e-8 / TPU v3-8 Setup
+
+If your Kaggle account has **TPU v5e-8** or **TPU v3-8** selected under **Accelerator**:
+
+1. Under **Notebook Settings**:
+   - **Accelerator**: Select **TPU v5e-8** (or **TPU v3-8**).
+   - **Internet**: Toggle to **ON**.
+   - **Persistence**: Set to **Files only**.
+
+2. Run Cell 1 configured for PyTorch XLA TPU:
+
+```python
+# Cell 1 (TPU): Clone ProX AI Repository & Verify TPU v5e-8 (PyTorch XLA)
+import os
+import torch
+
+%cd /kaggle/working
+if not os.path.exists("/kaggle/working/ProX-AI"):
+    !git clone https://github.com/ProXentix/ProX-AI.git /kaggle/working/ProX-AI
+
+%cd /kaggle/working/ProX-AI
+
+# Verify PyTorch XLA TPU Detection
+try:
+    import torch_xla
+    import torch_xla.core.xla_model as xm
+    device = xm.xla_device()
+    print("⚡ TPU Accelerator Detected:", device)
+except Exception as e:
+    print("TPU Initialization Info:", e)
+```
+
+3. Then run Cells 2 through 6 as normal:
+   - `build_prox_corpus.py` streams datasets.
+   - `train_tokenizer` builds the 32k BPE tokenizer.
+   - `train.py` automatically detects `torch_xla` TPU v5e-8 and executes PyTorch TPU matrix acceleration!
+
+---
+
 ## 💻 Local CLI Options (`scripts/build_prox_corpus.py`)
 
 | CLI Flag | Type | Default | Description |
