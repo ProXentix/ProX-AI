@@ -335,15 +335,21 @@ If your Kaggle account has **TPU v5e-8** or **TPU v3-8** selected under **Accele
 
 1. Under **Notebook Settings**:
    - **Accelerator**: Select **TPU v5e-8** (or **TPU v3-8**).
-   - **Internet**: Toggle to **ON**.
+   - **Internet**: Toggle to **ON** *(⚠️ CRITICAL: Kaggle disables internet by default; turn ON to allow git clone and dataset downloads)*.
    - **Persistence**: Set to **Files only**.
 
 2. Run Cell 1 configured for PyTorch XLA TPU:
 
 ```python
-# Cell 1 (TPU): Clone ProX AI Repository & Verify TPU v5e-8 (PyTorch XLA)
+# Cell 1 (TPU): Clone ProX AI Repository & Install/Verify PyTorch XLA TPU
 import os
-import torch
+
+# Install PyTorch XLA if missing on TPU environment
+try:
+    import torch_xla
+except ImportError:
+    print("Installing PyTorch XLA for TPU support...")
+    !pip install -q torch-xla
 
 %cd /kaggle/working
 if not os.path.exists("/kaggle/working/ProX-AI"):
@@ -352,12 +358,11 @@ if not os.path.exists("/kaggle/working/ProX-AI"):
 %cd /kaggle/working/ProX-AI
 
 # Verify PyTorch XLA TPU Detection
-try:
-    import torch_xla
-    import torch_xla.core.xla_model as xm
-    device = xm.xla_device()
-    print("⚡ TPU Accelerator Detected:", device)
-except Exception as e:
+import torch
+import torch_xla.core.xla_model as xm
+device = xm.xla_device()
+print("⚡ TPU Accelerator Detected & Ready:", device)
+```
     print("TPU Initialization Info:", e)
 ```
 
