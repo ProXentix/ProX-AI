@@ -1,5 +1,7 @@
+import os
 import sys
 import glob
+import argparse
 
 repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if repo_root not in sys.path:
@@ -57,7 +59,7 @@ def train_tokenizer(dataset_path: str, vocab_size: int, output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Train ProX BPE Tokenizer")
-    parser.add_argument("--dataset", type=str, required=True, help="Path to text/code dataset file or directory")
+    parser.add_argument("--dataset", "--data-dir", dest="dataset", type=str, required=True, help="Path to text/code dataset file or directory")
     parser.add_argument("--vocab-size", type=int, default=32000, help="Target vocabulary size")
     parser.add_argument("--output", type=str, default="./weights/tokenizer/tokenizer.json", help="Output path for tokenizer.json")
 
