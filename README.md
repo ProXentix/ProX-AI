@@ -225,6 +225,110 @@ You can now test the API endpoints (`/v1/models`, `/v1/chat/completions`) using 
 
 ---
 
+## 🏆 STEP-BY-STEP KAGGLE FREE GPU TRAINING GUIDE (DUAL T4 / P100)
+
+Kaggle provides **30 hours per week** of free GPU compute time with **Dual T4 GPUs (32 GB total VRAM)** or **Tesla P100 GPUs**.
+
+---
+
+### Step 1: Create Notebook & Configure Settings
+
+1. Go to [Kaggle Notebooks](https://www.kaggle.com/code) and click **New Notebook**.
+2. On the right side under **Notebook Settings**:
+   - **Accelerator**: Choose **GPU T4 x2** (Dual T4) or **GPU P100**.
+   - **Internet**: Turn **ON** *(CRITICAL: Required to download open datasets from Hugging Face)*.
+   - **Persistence**: Set to **Files only** or **Variables and Files** *(preserves generated datasets and checkpoints)*.
+
+---
+
+### Step 2: Clone Repository & Setup Directory
+
+Run this in Kaggle Cell 1:
+
+```python
+# Cell 1: Clone ProX AI Repository & Verify Dual GPUs
+import os
+import torch
+
+%cd /kaggle/working
+if not os.path.exists("/kaggle/working/ProX-AI"):
+    !git clone https://github.com/ProXentix/ProX-AI.git /kaggle/working/ProX-AI
+
+%cd /kaggle/working/ProX-AI
+
+print("PyTorch Version:", torch.__version__)
+print("CUDA Available: ", torch.cuda.is_available())
+print("GPU Count:      ", torch.cuda.device_count())
+for i in range(torch.cuda.device_count()):
+    print(f"  • GPU {i}: {torch.cuda.get_device_name(i)}")
+```
+
+---
+
+### Step 3: Install Required Dependencies
+
+Run this in Kaggle Cell 2:
+
+```python
+# Cell 2: Install Dependencies
+!pip install -q -r requirements.txt
+!pip install -q zstandard datasets tokenizers fastapi uvicorn
+```
+
+---
+
+### Step 4: Build Pre-Training Corpus (100M Tokens)
+
+Run this in Kaggle Cell 3:
+
+```python
+# Cell 3: Stream & Build 100M Token Corpus
+!PYTHONPATH=. python scripts/build_prox_corpus.py --target-tokens 100000000
+```
+
+> *Note: If your Kaggle session reaches time limit, resume anytime by running:*
+> ```python
+> !PYTHONPATH=. python scripts/build_prox_corpus.py --target-tokens 100000000 --resume
+> ```
+
+---
+
+### Step 5: Train / Freeze ProX BPE Tokenizer
+
+Run this in Kaggle Cell 4:
+
+```python
+# Cell 4: Train Tokenizer on Built Corpus
+!python -m backend.tokenizer.train_tokenizer --dataset prox_training_corpus/train --output weights/tokenizer/tokenizer.json --vocab-size 32000
+```
+
+---
+
+### Step 6: Launch PyTorch Neurix-100M Model Training
+
+Run this in Kaggle Cell 5:
+
+```python
+# Cell 5: Launch GPU Model Pre-Training
+!python -m backend.training.train --config configs/neurix-100m-training.yaml
+```
+
+---
+
+### Step 7: Compress & Download Weights / Checkpoints
+
+Run this in Kaggle Cell 6 to package your model weights for download directly from the Kaggle Output viewer:
+
+```python
+# Cell 6: Package Model Checkpoints & Tokenizer for Download
+import shutil
+
+shutil.make_archive("/kaggle/working/neurix-100m-weights", 'zip', "weights")
+print("Checkpoints saved to: /kaggle/working/neurix-100m-weights.zip")
+```
+
+---
+
 ## 💻 Local CLI Options (`scripts/build_prox_corpus.py`)
 
 | CLI Flag | Type | Default | Description |
