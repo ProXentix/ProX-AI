@@ -8,6 +8,30 @@ import statistics
 import gc
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional, Tuple, Set, Union, Callable, Generator
+import gzip
+try:
+    import zstandard as zstd
+    HAS_ZSTD = True
+except ImportError:
+    HAS_ZSTD = False
+
+def read_corpus_lines(filepath: str) -> Generator[str, None, None]:
+    if filepath.endswith(".gz"):
+        with gzip.open(filepath, "rt", encoding="utf-8") as f:
+            for line in f:
+                yield line
+    elif filepath.endswith(".zst") and HAS_ZSTD:
+        with open(filepath, "rb") as raw:
+            dctx = zstd.ZstdDecompressor()
+            with dctx.stream_reader(raw) as stream:
+                import io
+                text_stream = io.TextIOWrapper(stream, encoding="utf-8")
+                for line in text_stream:
+                    yield line
+    else:
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                yield line
 
 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if repo_root not in sys.path:
@@ -592,8 +616,7 @@ def build_prox_corpus_pipeline(
                     continue
                 fpath = os.path.join(in_dir, fname)
                 try:
-                    f_in = open(fpath, "r", encoding="utf-8")
-                    for line in f_in:
+                    for line in read_corpus_lines(fpath):
                         obj = json.loads(line.strip())
                         text = obj["text"]
                         cat = obj.get("category", DataCategory.GENERAL_NATURAL_LANGUAGE.value)
@@ -605,7 +628,6 @@ def build_prox_corpus_pipeline(
                         total_dir_tokens += toks
                         
                         out_writer.write_record(obj)
-                    f_in.close()
                 except Exception:
                     pass
             return total_dir_tokens
@@ -631,12 +653,11 @@ def build_prox_corpus_pipeline(
             res = []
             for fname in os.listdir(in_dir):
                 if fname.startswith(prefix):
-                    try:
-                        with open(os.path.join(in_dir, fname), "r", encoding="utf-8") as f:
-                            for line in f:
+                        try:
+                            for line in read_corpus_lines(os.path.join(in_dir, fname)):
                                 res.append(json.loads(line.strip())["text"])
                                 if len(res) >= limit: return res
-                    except Exception: pass
+                        except Exception: pass
             return res
 
         sample_train_texts = _read_texts(TRAIN_DIR, "train_shard", 1000)
