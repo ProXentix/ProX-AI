@@ -366,6 +366,7 @@ def build_prox_corpus_pipeline(
     category_rejected_docs: Dict[str, int] = {cat: 0 for cat in CANONICAL_CATEGORIES}
     source_stats: Dict[str, Dict[str, Any]] = {}
     completed_datasets: Set[str] = set(checkpoint_mgr.state.get("completed_datasets", []))
+    failed_datasets: Set[str] = set(checkpoint_mgr.state.get("failed_datasets", []))
     
     total_docs_seen = checkpoint_mgr.state.get("documents_seen", 0)
     total_duplicates = checkpoint_mgr.state.get("duplicates", 0)
@@ -382,12 +383,34 @@ def build_prox_corpus_pipeline(
             "python": 0, "c": 0, "cpp": 0, "js": 0, "ts": 0, "rust": 0, "go": 0, "java": 0
         }
 
-        if resume:
+        if resume or audit_resume:
             category_chars.update(checkpoint_mgr.state.get("category_chars", {}))
             category_docs.update(checkpoint_mgr.state.get("category_docs", {}))
             language_chars.update(checkpoint_mgr.state.get("language_chars", {}))
-            seen_sha256 = load_existing_dedup_hashes(DEDUPLICATED_DIR)
-            print(f"[Corpus Builder] Loaded {len(seen_sha256):,} existing document hashes for resume deduplication.", flush=True)
+            seen_sha256 = load_existing_dedup_hashes()
+            
+            if checkpoint_mgr.state.get("seen_sha256_count", 0) > 0 and len(seen_sha256) == 0:
+                print(f"[RESUME WARNING] Checkpoint hash count: {checkpoint_mgr.state.get('seen_sha256_count')} Actual dedup index count: 0", flush=True)
+                print("Running automatic dedup recovery...", flush=True)
+                seen_sha256 = run_dedup_recovery()
+            else:
+                print(f"[Corpus Builder] Loaded {len(seen_sha256):,} existing document hashes for resume deduplication.", flush=True)
+
+        if audit_resume:
+            print("\n" + "="*50)
+            print("AUDIT RESUME")
+            print("="*50)
+            print(f"Checkpoint seen_sha256_count: {checkpoint_mgr.state.get('seen_sha256_count')}")
+            print(f"Actual dedup index count:     {len(seen_sha256)}")
+            print(f"Completed datasets:           {list(completed_datasets)}")
+            print(f"Failed datasets:              {list(failed_datasets)}")
+            print(f"Category progress:            {category_chars}")
+            print("="*50 + "\n")
+            return {"status": "AUDIT_COMPLETE"}
+
+        dedup_writer = DedupIndexWriter()
+        last_checkpoint_accepted = sum(category_docs.values())
+        last_checkpoint_chars = sum(category_chars.values())
 
         progress = TerminalProgressTracker(raw_char_target_total, raw_category_targets)
         
@@ -396,6 +419,31 @@ def build_prox_corpus_pipeline(
         val_raw_writer = ShardedCorpusWriter(VAL_DIR, prefix="raw_val_shard", max_records_per_shard=5000)
         test_raw_writer = ShardedCorpusWriter(TEST_DIR, prefix="raw_test_shard", max_records_per_shard=5000)
         quality_pipe = DatasetQualityPipeline(min_len=20, max_len=100000, max_repetition=0.45)
+
+        def force_checkpoint(active_src: str, active_cat: str):
+            raw_writer.flush()
+            train_raw_writer.flush()
+            val_raw_writer.flush()
+            test_raw_writer.flush()
+            dedup_writer.flush()
+            checkpoint_mgr.save_checkpoint(
+                config_hash=config_hash,
+                category_chars=category_chars,
+                category_docs=category_docs,
+                language_chars=language_chars,
+                completed_datasets=list(completed_datasets),
+                failed_datasets=list(failed_datasets),
+                active_dataset=active_src,
+                active_category=active_cat,
+                seen_sha256_count=len(seen_sha256),
+                documents_seen=total_docs_seen,
+                documents_accepted=sum(category_docs.values()),
+                documents_rejected=sum(category_rejected_docs.values()),
+                duplicates=total_duplicates,
+                retry_statistics=getattr(net_streamer, 'retry_stats', {}),
+                source_statistics=source_stats,
+                git_commit="unknown"
+            )
 
         def process_and_write_sample(sample: Dict[str, Any]) -> bool:
             cat = sample.get("category", DataCategory.GENERAL_NATURAL_LANGUAGE.value)
@@ -432,6 +480,7 @@ def build_prox_corpus_pipeline(
                 return False
 
             seen_sha256.add(sha)
+            dedup_writer.write_hash(sha, src, cat, doc_chars)
             raw_writer.write_record(sample)
 
             split_val = int(hashlib.md5(sha.encode()).hexdigest(), 16) % 10000 / 10000.0
@@ -463,7 +512,35 @@ def build_prox_corpus_pipeline(
             total_curr = sum(category_chars.values())
             total_docs = sum(category_docs.values())
             progress.update(total_curr, category_chars, cat, src, total_docs)
+
+            nonlocal last_checkpoint_accepted, last_checkpoint_chars
+            if (total_docs - last_checkpoint_accepted) >= 10000 or (total_curr - last_checkpoint_chars) >= 50000000:
+                force_checkpoint(src, cat)
+                last_checkpoint_accepted = total_docs
+                last_checkpoint_chars = total_curr
+
             return True
+
+        def run_source_stream(dataset_id: str, dataset_name: str, cat_key: str, target: int, stream_func, sample_processor):
+            if dataset_name in completed_datasets or dataset_name in failed_datasets:
+                return
+            if category_chars[cat_key] >= target:
+                return
+            try:
+                for sample in net_streamer.safe_stream(stream_func, dataset_name):
+                    if category_chars[cat_key] >= target:
+                        completed_datasets.add(dataset_name)
+                        force_checkpoint(dataset_name, cat_key)
+                        return
+                    sample_processor(sample)
+                completed_datasets.add(dataset_name)
+                force_checkpoint(dataset_name, cat_key)
+            except Exception as e:
+                failed_datasets.add(dataset_name)
+                force_checkpoint(dataset_name, cat_key)
+                print(f"\n[SOURCE ERROR] Source: {dataset_name} Category: {cat_key} Exception: {e}", flush=True)
+                with open(os.path.join(REPORTS_DIR, "CORPUS_BUILD_ERRORS.jsonl"), "a", encoding="utf-8") as ef:
+                    ef.write(json.dumps({"source": dataset_name, "category": cat_key, "error": str(e), "time": time.time()}) + "\n")
 
         from datasets import load_dataset
         if single_category in [None, "general_natural_language"]:
@@ -471,48 +548,39 @@ def build_prox_corpus_pipeline(
             target = raw_category_targets[cat_key]
             if category_chars[cat_key] < target:
                 print(f"\n[Corpus Builder] Category: General Natural Language (Target: {target:,} chars)", flush=True)
-                fw_dataset_name = "HuggingFaceFW/fineweb-edu"
-                try:
-                    def get_fw_stream():
-                        return load_dataset(fw_dataset_name, name="sample-10BT", split="train", streaming=True)
-                    for sample in net_streamer.safe_stream(get_fw_stream, "FineWeb-Edu"):
-                        if category_chars[cat_key] >= target: break
-                        score = sample.get("score", 0)
-                        if score is not None and score >= 3.0:
-                            text = sample.get("text", "").strip()
-                            if len(text) > 150:
-                                process_and_write_sample({
-                                    "text": text, "category": cat_key, "language": "en",
-                                    "source": fw_dataset_name, "dataset": "FineWeb-Edu",
-                                    "license": "ODC-By 1.0 (Dataset) / Publisher Rights Preserved",
-                                    "source_url": f"https://huggingface.co/datasets/{fw_dataset_name}",
-                                    "source_id": f"fineweb_{sample.get('id', category_docs[cat_key])}",
-                                    "quality": f"educational_score_{round(float(score), 2)}",
-                                    "sha256": compute_sha256(text)
-                                })
-                except Exception as e:
-                    pass
+                
+                def fw_processor(sample):
+                    score = sample.get("score", 0)
+                    if score is not None and score >= 3.0:
+                        text = sample.get("text", "").strip()
+                        if len(text) > 150:
+                            process_and_write_sample({
+                                "text": text, "category": cat_key, "language": "en",
+                                "source": "HuggingFaceFW/fineweb-edu", "dataset": "FineWeb-Edu",
+                                "license": "ODC-By 1.0 (Dataset) / Publisher Rights Preserved",
+                                "source_url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu",
+                                "source_id": f"fineweb_{sample.get('id', category_docs[cat_key])}",
+                                "quality": f"educational_score_{round(float(score), 2)}",
+                                "sha256": compute_sha256(text)
+                            })
+                run_source_stream("HuggingFaceFW/fineweb-edu", "FineWeb-Edu", cat_key, target, lambda: load_dataset("HuggingFaceFW/fineweb-edu", name="sample-10BT", split="train", streaming=True), fw_processor)
                 
                 if category_chars[cat_key] < target and not PRODUCTION_MODE:
-                    try:
-                        wiki_dataset = "wikimedia/wikipedia"
-                        def get_wiki_stream(): return load_dataset(wiki_dataset, name="20231101.en", split="train", streaming=True)
-                        for sample in net_streamer.safe_stream(get_wiki_stream, "Wikipedia"):
-                            if category_chars[cat_key] >= target: break
-                            text = sample.get("text", "").strip()
-                            title = sample.get("title", "")
-                            full_doc = f"# {title}\n\n{text}" if title else text
-                            if len(full_doc) > 200:
-                                process_and_write_sample({
-                                    "text": full_doc, "category": cat_key, "language": "en",
-                                    "source": wiki_dataset, "dataset": "Wikimedia Wikipedia (20231101.en)",
-                                    "license": "CC-BY-SA 3.0 / GNU FDL",
-                                    "source_url": f"https://huggingface.co/datasets/{wiki_dataset}",
-                                    "source_id": f"wiki_en_{category_docs[cat_key]}_{title[:30]}",
-                                    "quality": "high_encyclopedic",
-                                    "sha256": compute_sha256(full_doc)
-                                })
-                    except Exception as e2: pass
+                    def wiki_processor(sample):
+                        text = sample.get("text", "").strip()
+                        title = sample.get("title", "")
+                        full_doc = f"# {title}\n\n{text}" if title else text
+                        if len(full_doc) > 200:
+                            process_and_write_sample({
+                                "text": full_doc, "category": cat_key, "language": "en",
+                                "source": "wikimedia/wikipedia", "dataset": "Wikimedia Wikipedia (20231101.en)",
+                                "license": "CC-BY-SA 3.0 / GNU FDL",
+                                "source_url": "https://huggingface.co/datasets/wikimedia/wikipedia",
+                                "source_id": f"wiki_en_{category_docs[cat_key]}_{title[:30]}",
+                                "quality": "high_encyclopedic",
+                                "sha256": compute_sha256(full_doc)
+                            })
+                    run_source_stream("wikimedia/wikipedia", "Wikipedia", cat_key, target, lambda: load_dataset("wikimedia/wikipedia", name="20231101.en", split="train", streaming=True), wiki_processor)
                 
                 if PRODUCTION_MODE and category_chars[cat_key] < target:
                     raise RuntimeError(f"PRODUCTION_MODE: Failed to reach target for {cat_key} without fallbacks.")
@@ -534,42 +602,36 @@ def build_prox_corpus_pipeline(
                     (PROGRAMMING_DATA_DIRS["java"], "java", prog_subtargets.get("java", int(target*0.11))),
                 ]
                 for data_dir, lang_key, lang_target in stack_subsets:
-                    if category_chars[cat_key] >= target: break
-                    lang_curr = language_chars.get(lang_key, 0)
-                    if lang_curr >= lang_target: continue
                     if is_hf_authenticated:
-                        try:
-                            def get_stack_stream(): return load_dataset("bigcode/the-stack-smol", data_dir=data_dir, split="train", streaming=True)
-                            for sample in net_streamer.safe_stream(get_stack_stream, f"Stack-{lang_key}"):
-                                if category_chars[cat_key] >= target or language_chars.get(lang_key, 0) >= lang_target: break
-                                code = sample.get("content", "").strip()
-                                repo = sample.get("repo_name", "unknown")
-                                lic = sample.get("license", "Permissive")
-                                if len(code) > 50:
-                                    process_and_write_sample({
-                                        "text": code, "category": cat_key, "language": lang_key,
-                                        "source": "bigcode/the-stack-smol", "dataset": f"The Stack Smol ({lang_key})",
-                                        "license": f"BigCode Terms / Permissive ({lic})",
-                                        "source_url": "https://huggingface.co/datasets/bigcode/the-stack-smol",
-                                        "source_id": f"stack_{lang_key}_{category_docs[cat_key]}_{repo[:30]}",
-                                        "quality": f"permissive_{lang_key}_code", "sha256": compute_sha256(code)
-                                    })
-                        except Exception: pass
-                if category_chars[cat_key] < target and not PRODUCTION_MODE:
-                    try:
-                        def get_cp_stream(): return load_dataset("codeparrot/codeparrot-clean-train", split="train", streaming=True)
-                        for sample in net_streamer.safe_stream(get_cp_stream, "CodeParrot"):
-                            if category_chars[cat_key] >= target: break
+                        def stack_processor(sample, lang_key=lang_key):
+                            if language_chars.get(lang_key, 0) >= lang_target:
+                                return
                             code = sample.get("content", "").strip()
                             repo = sample.get("repo_name", "unknown")
+                            lic = sample.get("license", "Permissive")
                             if len(code) > 50:
                                 process_and_write_sample({
-                                    "text": code, "category": cat_key, "language": "python",
-                                    "source": "codeparrot/codeparrot-clean-train", "dataset": "CodeParrot Clean (Python Fallback)",
-                                    "license": "Apache-2.0 Open Source", "source_url": "https://huggingface.co/datasets/codeparrot/codeparrot-clean-train",
-                                    "source_id": f"codeparrot_{category_docs[cat_key]}_{repo[:30]}", "quality": "permissive_python_code", "sha256": compute_sha256(code)
+                                    "text": code, "category": cat_key, "language": lang_key,
+                                    "source": "bigcode/the-stack-smol", "dataset": f"The Stack Smol ({lang_key})",
+                                    "license": f"BigCode Terms / Permissive ({lic})",
+                                    "source_url": "https://huggingface.co/datasets/bigcode/the-stack-smol",
+                                    "source_id": f"stack_{lang_key}_{category_docs[cat_key]}_{repo[:30]}",
+                                    "quality": f"permissive_{lang_key}_code", "sha256": compute_sha256(code)
                                 })
-                    except Exception: pass
+                        run_source_stream(f"Stack-{lang_key}", f"Stack-{lang_key}", cat_key, target, lambda data_dir=data_dir: load_dataset("bigcode/the-stack-smol", data_dir=data_dir, split="train", streaming=True), stack_processor)
+                        
+                if category_chars[cat_key] < target and not PRODUCTION_MODE:
+                    def cp_processor(sample):
+                        code = sample.get("content", "").strip()
+                        repo = sample.get("repo_name", "unknown")
+                        if len(code) > 50:
+                            process_and_write_sample({
+                                "text": code, "category": cat_key, "language": "python",
+                                "source": "codeparrot/codeparrot-clean-train", "dataset": "CodeParrot Clean (Python Fallback)",
+                                "license": "Apache-2.0 Open Source", "source_url": "https://huggingface.co/datasets/codeparrot/codeparrot-clean-train",
+                                "source_id": f"codeparrot_{category_docs[cat_key]}_{repo[:30]}", "quality": "permissive_python_code", "sha256": compute_sha256(code)
+                            })
+                    run_source_stream("CodeParrot", "CodeParrot", cat_key, target, lambda: load_dataset("codeparrot/codeparrot-clean-train", split="train", streaming=True), cp_processor)
                     
                 if PRODUCTION_MODE and category_chars[cat_key] < target:
                     raise RuntimeError(f"PRODUCTION_MODE: Failed to reach target for {cat_key} without fallbacks.")
@@ -579,62 +641,55 @@ def build_prox_corpus_pipeline(
             target = raw_category_targets[cat_key]
             if category_chars[cat_key] < target:
                 print(f"\n[Corpus Builder] Category: Technical Documentation (Target: {target:,} chars)", flush=True)
-                try:
-                    def get_cg_stream(): return load_dataset("google/code_x_glue_tc_nl_code_search_adv", split="train", streaming=True)
-                    for sample in net_streamer.safe_stream(get_cg_stream, "CodeXGlue"):
-                        if category_chars[cat_key] >= target: break
-                        docstring = sample.get("docstring", "").strip()
-                        code = sample.get("code", "").strip()
-                        repo = sample.get("repo", "")
-                        if len(docstring) > 40 and len(code) > 20:
-                            doc_text = f"# Technical Documentation: {repo}\n\n## Explanation\n{docstring}\n\n## Implementation\n```python\n{code}\n```"
-                            process_and_write_sample({
-                                "text": doc_text, "category": cat_key, "language": "en", "source": "google/code_x_glue_tc_nl_code_search_adv",
-                                "dataset": "CodeXGlue Code-NL Search", "license": "Apache-2.0 / Open Technical Documentation",
-                                "source_url": "https://huggingface.co/datasets/google/code_x_glue_tc_nl_code_search_adv", "source_id": f"codexglue_{category_docs[cat_key]}",
-                                "quality": "technical_docstring_explanation", "sha256": compute_sha256(doc_text)
-                            })
-                except Exception: pass
+                def cg_processor(sample):
+                    docstring = sample.get("docstring", "").strip()
+                    code = sample.get("code", "").strip()
+                    repo = sample.get("repo", "")
+                    if len(docstring) > 40 and len(code) > 20:
+                        doc_text = f"# Technical Documentation: {repo}\n\n## Explanation\n{docstring}\n\n## Implementation\n```python\n{code}\n```"
+                        process_and_write_sample({
+                            "text": doc_text, "category": cat_key, "language": "en", "source": "google/code_x_glue_tc_nl_code_search_adv",
+                            "dataset": "CodeXGlue Code-NL Search", "license": "Apache-2.0 / Open Technical Documentation",
+                            "source_url": "https://huggingface.co/datasets/google/code_x_glue_tc_nl_code_search_adv", "source_id": f"codexglue_{category_docs[cat_key]}",
+                            "quality": "technical_docstring_explanation", "sha256": compute_sha256(doc_text)
+                        })
+                run_source_stream("CodeXGlue", "CodeXGlue", cat_key, target, lambda: load_dataset("google/code_x_glue_tc_nl_code_search_adv", split="train", streaming=True), cg_processor)
+                
                 if category_chars[cat_key] < target:
-                    try:
-                        def get_ag_stream(): return load_dataset("fancyzhx/ag_news", split="train", streaming=True)
-                        for sample in net_streamer.safe_stream(get_ag_stream, "AGNews"):
-                            if category_chars[cat_key] >= target: break
-                            text = sample.get("text", "").strip()
-                            label = sample.get("label", 0)
-                            if text and label in (2, 3):
-                                full_doc = f"# Technical Reporting Record\n\n{text}"
-                                process_and_write_sample({
-                                    "text": full_doc, "category": cat_key, "language": "en", "source": "fancyzhx/ag_news",
-                                    "dataset": "AG News Sci/Tech", "license": "Academic / Public News Corpus",
-                                    "source_url": "https://huggingface.co/datasets/fancyzhx/ag_news", "source_id": f"ag_news_{category_docs[cat_key]}",
-                                    "quality": "technical_reporting", "sha256": compute_sha256(full_doc)
-                                })
-                    except Exception: pass
+                    def ag_processor(sample):
+                        text = sample.get("text", "").strip()
+                        label = sample.get("label", 0)
+                        if text and label in (2, 3):
+                            full_doc = f"# Technical Reporting Record\n\n{text}"
+                            process_and_write_sample({
+                                "text": full_doc, "category": cat_key, "language": "en", "source": "fancyzhx/ag_news",
+                                "dataset": "AG News Sci/Tech", "license": "Academic / Public News Corpus",
+                                "source_url": "https://huggingface.co/datasets/fancyzhx/ag_news", "source_id": f"ag_news_{category_docs[cat_key]}",
+                                "quality": "technical_reporting", "sha256": compute_sha256(full_doc)
+                            })
+                    run_source_stream("AGNews", "AGNews", cat_key, target, lambda: load_dataset("fancyzhx/ag_news", split="train", streaming=True), ag_processor)
 
         if single_category in [None, "mathematics_reasoning"]:
             cat_key = "mathematics_reasoning"
             target = raw_category_targets[cat_key]
             if category_chars[cat_key] < target:
                 print(f"\n[Corpus Builder] Category: Mathematics & Reasoning (Target: {target:,} chars)", flush=True)
-                try:
-                    def get_owm_stream(): return load_dataset("open-web-math/open-web-math", split="train", streaming=True)
-                    for sample in net_streamer.safe_stream(get_owm_stream, "OpenWebMath"):
-                        if category_chars[cat_key] >= target: break
-                        text = sample.get("text", "").strip()
-                        if len(text) > 100:
-                            process_and_write_sample({
-                                "text": text, "category": cat_key, "language": "math", "source": "open-web-math/open-web-math",
-                                "dataset": "OpenWebMath", "license": "ODC-By 1.0 (Dataset) / Common Crawl Terms Preserved",
-                                "source_url": "https://huggingface.co/datasets/open-web-math/open-web-math", "source_id": f"owm_{sample.get('id', category_docs[cat_key])}",
-                                "quality": "latex_web_mathematics", "sha256": compute_sha256(text)
-                            })
-                except Exception: pass
+                def owm_processor(sample):
+                    text = sample.get("text", "").strip()
+                    if len(text) > 100:
+                        process_and_write_sample({
+                            "text": text, "category": cat_key, "language": "math", "source": "open-web-math/open-web-math",
+                            "dataset": "OpenWebMath", "license": "ODC-By 1.0 (Dataset) / Common Crawl Terms Preserved",
+                            "source_url": "https://huggingface.co/datasets/open-web-math/open-web-math", "source_id": f"owm_{sample.get('id', category_docs[cat_key])}",
+                            "quality": "latex_web_mathematics", "sha256": compute_sha256(text)
+                        })
+                run_source_stream("OpenWebMath", "OpenWebMath", cat_key, target, lambda: load_dataset("open-web-math/open-web-math", split="train", streaming=True), owm_processor)
 
         raw_writer.close()
         train_raw_writer.close()
         val_raw_writer.close()
         test_raw_writer.close()
+        dedup_writer.close()
 
         total_chars = sum(category_chars.values())
         total_docs = sum(category_docs.values())
@@ -652,12 +707,17 @@ def build_prox_corpus_pipeline(
             category_chars=category_chars,
             category_docs=category_docs,
             language_chars=language_chars,
-            completed_datasets=completed_datasets,
+            completed_datasets=list(completed_datasets),
+            failed_datasets=list(failed_datasets),
+            active_dataset="Completed",
+            active_category="Finished",
             seen_sha256_count=len(seen_sha256),
             documents_seen=total_docs_seen,
             documents_accepted=total_docs,
             documents_rejected=sum(category_rejected_docs.values()),
             duplicates=total_duplicates,
+            retry_statistics=getattr(net_streamer, 'retry_stats', {}),
+            source_statistics=source_stats,
             git_commit=git_commit
         )
 
