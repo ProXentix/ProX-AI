@@ -16,7 +16,7 @@ class ProXTokenizer:
         self,
         tokenizer_path: Optional[str] = None,
         config: TokenizerConfig = DEFAULT_TOKENIZER_CONFIG,
-        allow_fallback: bool = True
+        allow_fallback: bool = False
     ):
         self.config = config
         self.tokenizer = None
@@ -24,16 +24,39 @@ class ProXTokenizer:
 
         if os.path.exists(self.target_path):
             try:
-                self.load(target_path)
+                self.load(self.target_path)
+                
+                if self.tokenizer is None:
+                    raise RuntimeError("Tokenizer loaded but is None.")
+                if self.vocab_size != 32000:
+                    raise RuntimeError(f"Vocabulary size mismatch. Expected 32000, got {self.vocab_size}.")
+                
+                required_special_tokens = ["<pad>", "<bos>", "<eos>", "<unk>", "<proxpl_start>", "<proxpl_end>"]
+                for t in required_special_tokens:
+                    if self.tokenizer.token_to_id(t) is None:
+                        raise RuntimeError(f"Missing required special token: {t}")
+                        
+                sha256_hash = self.get_file_hash()
+                if sha256_hash == "N/A":
+                    raise RuntimeError("Failed to compute SHA256 for tokenizer.")
+                    
             except Exception as e:
                 if not allow_fallback:
-                    raise RuntimeError(f"[ProX Tokenizer] Failed to load frozen tokenizer from {self.target_path}: {e}")
+                    raise RuntimeError(
+                        f"[ProX Tokenizer] Failed to load frozen tokenizer from {self.target_path}: {e}\n"
+                        f"Expected vocabulary size: 32000\n"
+                        f"Tokenizer version: ProX-Tokenizer-DEV\n"
+                        f"Required artifact: weights/tokenizer/tokenizer.json"
+                    )
                 print(f"[ProX Tokenizer] Failed to load from {self.target_path}: {e}. Building fallback tokenizer.")
                 self._build_fallback_tokenizer(self.target_path)
         else:
             if not allow_fallback:
-                raise FileNotFoundError(
-                    f"[ProX Tokenizer] Frozen tokenizer artifact not found at '{self.target_path}'. "
+                raise RuntimeError(
+                    f"[ProX Tokenizer] Frozen tokenizer artifact not found at '{self.target_path}'.\n"
+                    f"Expected vocabulary size: 32000\n"
+                    f"Tokenizer version: ProX-Tokenizer-DEV\n"
+                    f"Required artifact: weights/tokenizer/tokenizer.json\n"
                     f"Please run 'python -m backend.tokenizer.train_tokenizer --dataset <data> --output {self.target_path}' first."
                 )
             self._build_fallback_tokenizer(self.target_path)
