@@ -41,54 +41,18 @@ class ProXTokenizer:
                     raise RuntimeError("Failed to compute SHA256 for tokenizer.")
                     
             except Exception as e:
-                if not allow_fallback:
-                    raise RuntimeError(
-                        f"[ProX Tokenizer] Failed to load frozen tokenizer from {self.target_path}: {e}\n"
-                        f"Expected vocabulary size: 32000\n"
-                        f"Tokenizer version: ProX-Tokenizer-DEV\n"
-                        f"Required artifact: weights/tokenizer/tokenizer.json"
-                    )
-                print(f"[ProX Tokenizer] Failed to load from {self.target_path}: {e}. Building fallback tokenizer.")
-                self._build_fallback_tokenizer(self.target_path)
-        else:
-            if not allow_fallback:
                 raise RuntimeError(
-                    f"[ProX Tokenizer] Frozen tokenizer artifact not found at '{self.target_path}'.\n"
+                    f"[ProX Tokenizer] Failed to load frozen tokenizer from {self.target_path}: {e}\n"
                     f"Expected vocabulary size: 32000\n"
-                    f"Tokenizer version: ProX-Tokenizer-DEV\n"
-                    f"Required artifact: weights/tokenizer/tokenizer.json\n"
-                    f"Please run 'python -m backend.tokenizer.train_tokenizer --dataset <data> --output {self.target_path}' first."
+                    f"Required artifact: weights/tokenizer/tokenizer.json"
                 )
-            self._build_fallback_tokenizer(self.target_path)
-
-    def _build_fallback_tokenizer(self, save_path: Optional[str] = None):
-        """Builds a Byte-Level BPE tokenizer preconfigured with ProX special tokens."""
-        bpe = models.BPE(unk_token=self.config.unk_token)
-        self.tokenizer = Tokenizer(bpe)
-        self.tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
-        self.tokenizer.decoder = decoders.ByteLevel()
-        self.tokenizer.post_processor = processors.ByteLevel(trim_offsets=False)
-
-        trainer = trainers.BpeTrainer(
-            vocab_size=self.config.vocab_size,
-            min_frequency=self.config.min_frequency,
-            special_tokens=self.config.special_tokens,
-            initial_alphabet=pre_tokenizers.ByteLevel.alphabet()
-        )
-        # Train on initial base alphabet & special tokens
-        dummy_corpus = [
-            "ProXPL fn main() { let x: int = 42; return x; }",
-            "function calculateSum(a: number, b: number): number { return a + b; }",
-            "def fibonacci(n: int) -> int:\n    if n <= 1: return n\n    return fibonacci(n-1) + fibonacci(n-2)",
-            "#include <stdio.h>\nint main() { printf(\"Hello ProX\\n\"); return 0; }",
-            "{\"status\": \"ok\", \"model\": \"neurix-100m\", \"value\": 100}"
-        ]
-        self.tokenizer.train_from_iterator(dummy_corpus, trainer=trainer)
-        if save_path:
-            try:
-                self.save(save_path)
-            except Exception:
-                pass
+        else:
+            raise RuntimeError(
+                f"[ProX Tokenizer] Frozen tokenizer artifact not found at '{self.target_path}'.\n"
+                f"Expected vocabulary size: 32000\n"
+                f"Required artifact: weights/tokenizer/tokenizer.json\n"
+                f"Please run 'python -m backend.tokenizer.train_tokenizer --dataset <data> --output {self.target_path}' first."
+            )
 
     def encode(self, text: str, add_special_tokens: bool = False) -> List[int]:
         if not text:
@@ -155,4 +119,3 @@ class ProXTokenizer:
         print(f"BOS token: {self.config.bos_token}")
         print(f"EOS token: {self.config.eos_token}")
 
-tokenizer = ProXTokenizer()

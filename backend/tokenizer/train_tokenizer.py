@@ -1,10 +1,12 @@
-
 import os
 import sys
 import glob
 import argparse
 import io
 import json
+import hashlib
+import subprocess
+from datetime import datetime, timezone
 
 repo_root = os.path.dirname(
     os.path.dirname(
@@ -238,6 +240,18 @@ def train_tokenizer(
     vocab_size: int,
     output_path: str,
 ):
+    def _get_git_commit():
+        try:
+            return subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL, cwd=repo_root).decode("utf-8").strip()
+        except Exception:
+            return "unknown"
+
+    def _get_file_hash(path):
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            while chunk := f.read(8192):
+                h.update(chunk)
+        return h.hexdigest()
     print(
         "[Tokenizer Trainer] Training ProX BPE Tokenizer...",
         flush=True,
@@ -325,12 +339,48 @@ def train_tokenizer(
 
     actual_vocab_size = tokenizer.get_vocab_size()
 
+    if actual_vocab_size != 32000:
+        raise RuntimeError(f"Tokenizer training failed: actual vocab size {actual_vocab_size} does not exactly match 32000.")
+
     print(
         "[Tokenizer Trainer] Tokenizer trained and saved to "
         f"{output_path} "
         f"(vocab size: {actual_vocab_size})",
         flush=True,
     )
+
+    sha256_hash = _get_file_hash(output_path)
+    sha_path = output_path.replace(".json", ".sha256")
+    with open(sha_path, "w") as f:
+        f.write(sha256_hash)
+        
+    # Generate Manifest
+    manifest_path = output_path.replace(".json", "_manifest.json")
+    
+    # Compute a quick hash for the training corpus
+    corpus_h = hashlib.sha256()
+    corpus_h.update(dataset_path.encode('utf-8'))
+    if os.path.isdir(dataset_path):
+        for root, _, files in sorted(os.walk(dataset_path)):
+            for f in sorted(files):
+                fpath = os.path.join(root, f)
+                corpus_h.update(f.encode('utf-8'))
+                try:
+                    corpus_h.update(str(os.path.getsize(fpath)).encode('utf-8'))
+                except Exception:
+                    pass
+                    
+    manifest = {
+        "tokenizer_version": "ProX-Tokenizer-DEV",
+        "vocab_size": actual_vocab_size,
+        "sha256": sha256_hash,
+        "special_tokens": config.special_tokens,
+        "training_corpus_hash": corpus_h.hexdigest(),
+        "training_git_commit": _get_git_commit(),
+        "creation_timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
 
 
 # ---------------------------------------------------------------------------
