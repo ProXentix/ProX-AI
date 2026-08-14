@@ -1,33 +1,38 @@
-# ⚡ ProX AI — Training Corpus Pipeline & Google Colab Training Guide (0 to 100)
+<h1 align="center">
+  <br>
+  <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/cpu.svg" alt="ProX AI" width="120">
+  <br>
+  ProX AI
+  <br>
+</h1>
 
-> **Next-Generation Modular AI Ecosystem, specialized Neural Architectures (Neurix, Logix, Optix), and Reproducible 100M-Token Pre-Training Pipeline v0.1**
+<h4 align="center">A Production-Grade, Multi-Model AI Ecosystem Built from Scratch</h4>
 
-ProX AI is a full-stack, modular artificial intelligence platform featuring specialized model families (**Neurix**, **Logix**, and **Optix**), custom PyTorch pre-training & inference engines, a high-throughput streaming dataset pipeline, and a modern React 19 web application.
+<p align="center">
+  <a href="#overview">Overview</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#quickstart">Quickstart</a> •
+  <a href="#training-guide">Training Guide</a> •
+  <a href="#ui-integration">UI Integration</a>
+</p>
 
 ---
 
-## 🌟 Architectural Overview
+## 🌟 Overview
 
-```mermaid
-graph TD
-    Client[React 19 Frontend UI] <-->|SSE Streaming / REST| API[FastAPI Gateway /v1]
-    API <--> Registry[ProX Model Registry]
-    Registry --> Neurix[🧠 Neurix: General AI]
-    Registry --> Logix[💻 Logix: Code & Reasoning]
-    Registry --> Optix[👁️ Optix: Vision & Multimodal]
-    
-    subgraph "Core Backend & Data Pipeline Engine"
-        Inference[KV-Cached Inference Engine]
-        Tokenizer[ProX BPE Tokenizer]
-        CorpusPipeline[100M-Token Corpus Builder]
-        Trainer[PyTorch Checkpoint Trainer]
-    end
-    
-    CorpusPipeline --> Tokenizer
-    Tokenizer --> Trainer
-    Trainer --> Neurix
-    Trainer --> Logix
-```
+**ProX AI** is a comprehensive, modular Artificial Intelligence system designed to demonstrate how modern AI models work under the hood. Unlike wrappers around external APIs, ProX AI implements its own neural network architectures entirely from scratch using PyTorch. 
+
+It is designed to be lightweight enough to train on consumer hardware (or free cloud GPUs like Google Colab) while maintaining the structural integrity and modularity of a startup-grade AI product.
+
+## 🧠 Architecture
+
+ProX AI consists of 5 independent but interconnected models, orchestrated by a central routing engine:
+
+1. **Neurix-mini (Text)**: A custom decoder-only Transformer language model. Features multi-head self-attention, positional encoding, and a custom character-level tokenizer.
+2. **Logyx-mini (Code)**: Shares the Neurix architecture but is optimized and trained specifically on code datasets for code generation tasks.
+3. **Imagix-lite (Vision Generation)**: A lightweight Generative Adversarial Network (GAN) designed to synthesize images from latent noise vectors.
+4. **Optyx-lite (Vision Classification)**: A Convolutional Neural Network (CNN) built for rapid and accurate image classification.
+5. **Elevon-lite (Router)**: The orchestration brain. Elevon analyzes incoming user prompts and intelligently routes the request to the appropriate specialized model.
 
 ---
 
