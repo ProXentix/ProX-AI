@@ -130,9 +130,6 @@ class ProXTokenizer:
         print(f"BOS token: {self.config.bos_token}")
         print(f"EOS token: {self.config.eos_token}")
 
-try:
-    tokenizer = ProXTokenizer(allow_fallback=False)
-except Exception:
-    tokenizer = None
+tokenizer = ProXTokenizer(allow_fallback=False)
 
 
