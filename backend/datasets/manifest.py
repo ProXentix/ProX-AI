@@ -77,7 +77,7 @@ class DatasetManifestGenerator:
             "dataset_version": self.dataset_version,
             "creation_timestamp": datetime.now(timezone.utc).isoformat(),
             "dataset_hash": ds_hash,
-            "source_identifiers": source_paths or ["data/smoke_test.jsonl"],
+            "source_identifiers": source_paths or [],
             "summary_statistics": {
                 "input_document_count": filter_res["stats"]["input_documents"],
                 "clean_document_count": len(clean_docs),

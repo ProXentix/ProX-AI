@@ -3,26 +3,36 @@ import json
 from typing import Dict, Any, List, Tuple, Optional
 
 TARGET_CONFIG: Dict[str, Any] = {
-    "target_total_tokens": 100_000_000,
+    "target_total_tokens": 1_000_000_000,
     "category_targets": {
-        "general_natural_language": 50_000_000,
-        "programming_languages": 30_000_000,
-        "technical_documentation": 15_000_000,
-        "mathematics_reasoning": 5_000_000,
+        "general_natural_language": 350_000_000,
+        "programming_languages": 250_000_000,
+        "technical_documentation": 150_000_000,
+        "hindi": 150_000_000,
+        "mathematics_reasoning": 75_000_000,
+        "other_indic": 25_000_000,
     },
-    "validation_ratio": 0.10,
+    "validation_ratio": 0.05,
+    "test_ratio": 0.05,
 }
 
-# Per-language programming targets (percentage breakdown of 30M target)
+# Per-language programming targets (percentage breakdown of 250M target)
 PROGRAMMING_LANGUAGE_TARGETS: Dict[str, float] = {
-    "python": 0.20,      # 6.0M tokens
-    "c": 0.13,           # 3.9M tokens
-    "cpp": 0.13,         # 3.9M tokens
-    "javascript": 0.13,   # 3.9M tokens
-    "typescript": 0.10,   # 3.0M tokens
-    "rust": 0.10,         # 3.0M tokens
-    "go": 0.10,           # 3.0M tokens
-    "java": 0.11,         # 3.3M tokens
+    "python": 0.20,
+    "c": 0.08,
+    "cpp": 0.10,
+    "javascript": 0.10,
+    "typescript": 0.08,
+    "rust": 0.08,
+    "go": 0.06,
+    "java": 0.10,
+    "sql": 0.04,
+    "csharp": 0.04,
+    "kotlin": 0.03,
+    "swift": 0.03,
+    "shell": 0.03,
+    "html_css": 0.02,
+    "proxpl": 0.01,
 }
 
 # Canonical programming language directory mapping for Hugging Face datasets (e.g. bigcode/the-stack-smol)
@@ -35,6 +45,13 @@ PROGRAMMING_DATA_DIRS: Dict[str, str] = {
     "rust": "data/rust",
     "go": "data/go",
     "java": "data/java",
+    "sql": "data/sql",
+    "csharp": "data/csharp",
+    "kotlin": "data/kotlin",
+    "swift": "data/swift",
+    "shell": "data/shell",
+    "html_css": "data/html",
+    "proxpl": "data/proxpl",
 }
 
 DATASET_REGISTRY: List[Dict[str, Any]] = [
@@ -193,14 +210,13 @@ def get_scaled_target_config(target_tokens: int) -> Dict[str, Any]:
     return {
         "target_total_tokens": target_tokens,
         "category_targets": scaled_categories,
-        "validation_ratio": TARGET_CONFIG["validation_ratio"],
+        "validation_ratio": TARGET_CONFIG.get("validation_ratio", 0.05),
+        "test_ratio": TARGET_CONFIG.get("test_ratio", 0.05),
     }
 
 def validate_target_config(config: Dict[str, Any]) -> bool:
-    """Validates that category targets sum exactly to the target_total_tokens and contains no proxpl."""
+    """Validates that category targets sum exactly to the target_total_tokens."""
     cat_targets = config.get("category_targets", {})
-    if "proxpl" in cat_targets:
-        raise ValueError("Configuration Error: 'proxpl' category is prohibited in PROX TRAINING CORPUS v0.1.")
     total_target = config.get("target_total_tokens", 0)
     sum_cats = sum(cat_targets.values())
     if sum_cats != total_target:

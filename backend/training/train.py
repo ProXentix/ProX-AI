@@ -8,19 +8,22 @@ from backend.datasets.loader import LocalDatasetLoader
 from backend.datasets.preprocess import prepare_dataset_splits
 from backend.training.config import TrainingConfig, CheckpointConfig
 from backend.training.trainer import NeurixTrainer
-from backend.training.checkpoint import inspect_checkpoint
+from backend.training.checkpoint import inspect_checkpoint, export_inference_model
+from backend.utils.hf_hub import upload_to_hf_model
 
 def main():
     parser = argparse.ArgumentParser(description="ProX AI Neurix Training & Checkpoint CLI")
     parser.add_argument("--model", type=str, default="neurix-100m", help="Model config name (e.g. neurix-100m, neurix-tiny)")
     parser.add_argument("--config", type=str, default=None, help="Path to YAML config file")
-    parser.add_argument("--dataset", type=str, default="./data/smoke_test.jsonl", help="Dataset file or directory path")
+    parser.add_argument("--dataset", type=str, default=None, help="Dataset file or directory path")
     parser.add_argument("--output", type=str, default=None, help="Checkpoint output directory")
     parser.add_argument("--steps", type=int, default=None, help="Absolute total target global training steps")
     parser.add_argument("--additional-steps", type=int, default=None, help="Additional steps to run relative to loaded checkpoint step")
     parser.add_argument("--tokenizer", type=str, default="./weights/tokenizer/tokenizer.json", help="Path to frozen tokenizer artifact")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint file to resume from")
     parser.add_argument("--inspect", type=str, default=None, help="Path to checkpoint file to inspect metadata")
+    parser.add_argument("--dev", action="store_true", help="Allow dirty working tree (local development only)")
+    parser.add_argument("--hf-repo", type=str, default=None, help="Hugging Face Model repo to upload final model to")
 
     args = parser.parse_args()
 
@@ -41,21 +44,18 @@ def main():
         training_config = TrainingConfig(**t_dict)
         checkpoint_config = CheckpointConfig(**c_dict)
 
-        if args.dataset == "./data/smoke_test.jsonl" and d_dict.get("train_dataset"):
+        if args.dataset is None and d_dict.get("train_dataset"):
             args.dataset = d_dict["train_dataset"]
     else:
         model_config = get_config(args.model)
         training_config = TrainingConfig()
         checkpoint_config = CheckpointConfig(output_dir=f"./weights/{args.model}")
 
-    # Fallback dataset resolution
+    if args.dataset is None:
+        raise ValueError("No dataset provided via CLI (--dataset) or config (data.train_dataset).")
+
     if not os.path.exists(args.dataset):
-        if os.path.exists("prox_training_corpus/train") and os.listdir("prox_training_corpus/train"):
-            print(f"[ProX Training] Path '{args.dataset}' not found. Defaulting to built corpus at 'prox_training_corpus/train'")
-            args.dataset = "prox_training_corpus/train"
-        elif os.path.exists("./data/smoke_test.jsonl"):
-            print(f"[ProX Training] Path '{args.dataset}' not found. Defaulting to './data/smoke_test.jsonl'")
-            args.dataset = "./data/smoke_test.jsonl"
+        raise FileNotFoundError(f"[ProX Training] Production dataset missing at '{args.dataset}'. Training aborted.")
 
     if args.resume and os.path.exists(args.resume):
         try:
@@ -91,6 +91,16 @@ def main():
     # Load frozen tokenizer artifact (disallow fallback dynamic training)
     tokenizer = ProXTokenizer(tokenizer_path=args.tokenizer, allow_fallback=False)
 
+    from backend.training.preflight import run_preflight
+    run_preflight(
+        model_config=model_config,
+        tokenizer=tokenizer,
+        dataset_path=args.dataset,
+        batch_size=training_config.batch_size,
+        grad_accum=training_config.gradient_accumulation_steps,
+        allow_dirty=args.dev
+    )
+
     loader = LocalDatasetLoader(args.dataset)
     raw_texts = loader.load_texts()
 
@@ -117,6 +127,27 @@ def main():
     )
 
     trainer.train(resume_path=args.resume)
+    
+    print("\n[ProX Training] Training Complete. Exporting final inference model...")
+    export_path = export_inference_model(
+        output_dir=checkpoint_config.output_dir,
+        model=model,
+        model_config=model_config,
+        tokenizer_metadata={"version": "ProX Tokenizer DEV", "sha256": "ae03bfc8edfde3fab00b13a6cd65312a30bcf470ff9182fd7d405ad49103e0a1"}
+    )
+    
+    if args.hf_repo:
+        print(f"\n[ProX Training] Uploading final model to {args.hf_repo}...")
+        success = upload_to_hf_model(
+            repo_id=args.hf_repo,
+            local_path=export_path,
+            path_in_repo="inference_model.pt",
+            dry_run=False
+        )
+        if success:
+            print("[ProX Training] Final model successfully uploaded to Hugging Face!")
+        else:
+            print("[ProX Training] WARNING: Failed to upload final model to Hugging Face.")
 
 if __name__ == "__main__":
     main()

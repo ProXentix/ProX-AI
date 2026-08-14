@@ -8,6 +8,8 @@ class DataCategory(str, Enum):
     PROGRAMMING_LANGUAGES = "programming_languages"
     TECHNICAL_DOCUMENTATION = "technical_documentation"
     MATHEMATICS_REASONING = "mathematics_reasoning"
+    HINDI = "hindi"
+    OTHER_INDIC = "other_indic"
 
 CANONICAL_CATEGORIES = [c.value for c in DataCategory]
 
@@ -39,6 +41,18 @@ def classify_document(text: str, file_path: str = "") -> DataCategory:
     # Content Heuristics
     if not text:
         return DataCategory.GENERAL_NATURAL_LANGUAGE
+
+    # Indic Language / Hindi Detection
+    # Devanagari Unicode Block: U+0900 to U+097F
+    devanagari_chars = len(re.findall(r'[\u0900-\u097F]', text))
+    if devanagari_chars > 0:
+        # Check if there is a significant presence of Devanagari (handles code-switching too)
+        if devanagari_chars / len(text) > 0.02 or devanagari_chars > 15:
+            # Distinguish Hindi vs other Devanagari (Marathi, Nepali, etc.) using common Hindi stop words
+            hindi_keywords = ["है", "और", "में", "की", "से", "को", "एक", "यह"]
+            if any(f" {kw} " in text or text.endswith(kw) or text.endswith(f"{kw}।") for kw in hindi_keywords):
+                return DataCategory.HINDI
+            return DataCategory.OTHER_INDIC
 
     # Mathematics & Reasoning heuristics
     if re.search(r"\\(begin|end|frac|sum|int|sqrt|matrix|align)", text) or re.search(r"\b(Theorem|Proof|Lemma|Q\.E\.D\.)\b", text):

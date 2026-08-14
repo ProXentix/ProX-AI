@@ -20,23 +20,23 @@ class ProXTokenizer:
     ):
         self.config = config
         self.tokenizer = None
+        self.target_path = tokenizer_path or DEFAULT_TOKENIZER_PATH
 
-        target_path = tokenizer_path or DEFAULT_TOKENIZER_PATH
-        if os.path.exists(target_path):
+        if os.path.exists(self.target_path):
             try:
                 self.load(target_path)
             except Exception as e:
                 if not allow_fallback:
-                    raise RuntimeError(f"[ProX Tokenizer] Failed to load frozen tokenizer from {target_path}: {e}")
-                print(f"[ProX Tokenizer] Failed to load from {target_path}: {e}. Building fallback tokenizer.")
-                self._build_fallback_tokenizer(target_path)
+                    raise RuntimeError(f"[ProX Tokenizer] Failed to load frozen tokenizer from {self.target_path}: {e}")
+                print(f"[ProX Tokenizer] Failed to load from {self.target_path}: {e}. Building fallback tokenizer.")
+                self._build_fallback_tokenizer(self.target_path)
         else:
             if not allow_fallback:
                 raise FileNotFoundError(
-                    f"[ProX Tokenizer] Frozen tokenizer artifact not found at '{target_path}'. "
-                    f"Please run 'python -m backend.tokenizer.train_tokenizer --dataset <data> --output {target_path}' first."
+                    f"[ProX Tokenizer] Frozen tokenizer artifact not found at '{self.target_path}'. "
+                    f"Please run 'python -m backend.tokenizer.train_tokenizer --dataset <data> --output {self.target_path}' first."
                 )
-            self._build_fallback_tokenizer(target_path)
+            self._build_fallback_tokenizer(self.target_path)
 
     def _build_fallback_tokenizer(self, save_path: Optional[str] = None):
         """Builds a Byte-Level BPE tokenizer preconfigured with ProX special tokens."""
@@ -108,5 +108,28 @@ class ProXTokenizer:
     def unk_token_id(self) -> int:
         res = self.tokenizer.token_to_id(self.config.unk_token)
         return res if res is not None else 3
+
+    def get_file_hash(self) -> str:
+        if not hasattr(self, 'target_path') or not self.target_path or not os.path.exists(self.target_path):
+            return "N/A"
+        import hashlib
+        h = hashlib.sha256()
+        try:
+            with open(self.target_path, "rb") as f:
+                while chunk := f.read(8192):
+                    h.update(chunk)
+            return h.hexdigest()
+        except Exception:
+            return "N/A"
+
+    def print_tokenizer_report(self):
+        print(f"Tokenizer version: ProX-Tokenizer-DEV")
+        print(f"Tokenizer SHA256: {self.get_file_hash()}")
+        print(f"Vocabulary size: {self.vocab_size}")
+        print(f"Special tokens: {self.config.special_tokens}")
+        print(f"Unknown token behavior: {self.config.unk_token}")
+        print(f"Padding token: {self.config.pad_token}")
+        print(f"BOS token: {self.config.bos_token}")
+        print(f"EOS token: {self.config.eos_token}")
 
 tokenizer = ProXTokenizer()

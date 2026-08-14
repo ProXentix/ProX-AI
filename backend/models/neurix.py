@@ -146,7 +146,25 @@ class NeurixTransformer(nn.Module):
         return logits
 
     def num_parameters(self) -> int:
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+        params = {p for p in self.parameters() if p.requires_grad}
+        return sum(p.numel() for p in params)
+
+    def get_parameter_breakdown(self) -> dict:
+        total = sum(p.numel() for p in self.parameters())
+        trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        
+        # Deduplicate exactly based on id(p) to handle tie_weights
+        unique_params = {id(p): p for p in self.parameters()}
+        unique = sum(p.numel() for p in unique_params.values())
+
+        return {
+            "total_parameters": total,
+            "trainable_parameters": trainable,
+            "unique_parameters": unique,
+            "is_tied": self.config.tie_weights,
+            "vocab_size": self.vocab_size,
+            "d_model": self.d_model,
+        }
 
 def build_neurix_100m() -> NeurixTransformer:
     config = get_config("neurix-100m")

@@ -66,6 +66,16 @@ PRESET_CONFIGS = {
         max_seq_len=2048,
         tie_weights=True
     ),
+    "neurix-1b": ModelConfig(
+        name="neurix-1b",
+        vocab_size=32000,
+        d_model=1792,
+        n_layers=24,
+        n_heads=14,
+        d_ff=4800,
+        max_seq_len=4096,
+        tie_weights=True
+    ),
     "optix": ModelConfig(
         name="optix",
         vocab_size=32000,
@@ -82,5 +92,4 @@ PRESET_CONFIGS = {
 def get_config(name: str) -> ModelConfig:
     if name in PRESET_CONFIGS:
         return PRESET_CONFIGS[name]
-    # Default fallback
-    return PRESET_CONFIGS["neurix-100m"]
+    raise ValueError(f"Unknown model config: {name}. Available configs: {list(PRESET_CONFIGS.keys())}")

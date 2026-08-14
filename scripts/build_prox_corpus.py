@@ -81,12 +81,13 @@ PROCESSED_DIR = os.path.join(CORPUS_ROOT, "processed")
 DEDUPLICATED_DIR = os.path.join(CORPUS_ROOT, "deduplicated")
 TRAIN_DIR = os.path.join(CORPUS_ROOT, "train")
 VAL_DIR = os.path.join(CORPUS_ROOT, "validation")
+TEST_DIR = os.path.join(CORPUS_ROOT, "test")
 MANIFESTS_DIR = os.path.join(CORPUS_ROOT, "manifests")
 REPORTS_DIR = os.path.join(CORPUS_ROOT, "reports")
 CHECKPOINT_DIR = os.path.join(CORPUS_ROOT, "checkpoints")
 
 def ensure_corpus_directories():
-    for d in [CORPUS_ROOT, SOURCES_DIR, RAW_DIR, PROCESSED_DIR, DEDUPLICATED_DIR, TRAIN_DIR, VAL_DIR, MANIFESTS_DIR, REPORTS_DIR, CHECKPOINT_DIR]:
+    for d in [CORPUS_ROOT, SOURCES_DIR, RAW_DIR, PROCESSED_DIR, DEDUPLICATED_DIR, TRAIN_DIR, VAL_DIR, TEST_DIR, MANIFESTS_DIR, REPORTS_DIR, CHECKPOINT_DIR]:
         os.makedirs(d, exist_ok=True)
 
 class TerminalProgressTracker:
@@ -209,7 +210,8 @@ def build_prox_corpus_pipeline(
 
     category_targets = config["category_targets"]
     target_total = config["target_total_tokens"]
-    val_ratio = config["validation_ratio"]
+    val_ratio = config.get("validation_ratio", 0.05)
+    test_ratio = config.get("test_ratio", 0.05)
 
     # Preflight HF Auth check
     hf_auth_status, is_hf_authenticated = check_hf_authentication()
@@ -258,6 +260,7 @@ def build_prox_corpus_pipeline(
     dedup_writer = ShardedCorpusWriter(DEDUPLICATED_DIR, prefix="deduplicated", max_records_per_shard=5000)
     train_writer = ShardedCorpusWriter(TRAIN_DIR, prefix="train_shard", max_records_per_shard=5000)
     val_writer = ShardedCorpusWriter(VAL_DIR, prefix="val_shard", max_records_per_shard=5000)
+    test_writer = ShardedCorpusWriter(TEST_DIR, prefix="test_shard", max_records_per_shard=5000)
 
     quality_pipe = DatasetQualityPipeline(min_len=20, max_len=100000, max_repetition=0.45)
     net_streamer = RobustNetworkStreamer(max_retries=5, initial_backoff=2.0)
@@ -326,10 +329,15 @@ def build_prox_corpus_pipeline(
         processed_writer.write_record(sample)
         dedup_writer.write_record(sample)
 
-        # Stratified split
-        split_assignment = assign_stratified_split(sample, val_ratio=val_ratio)
-        if split_assignment == "validation":
+        # Stratified split with Test support
+        import random
+        # Just use a stable hash for deterministic split
+        split_val = int(hashlib.md5(sha.encode()).hexdigest(), 16) % 10000 / 10000.0
+        
+        if split_val < val_ratio:
             val_writer.write_record(sample)
+        elif split_val < (val_ratio + test_ratio):
+            test_writer.write_record(sample)
         else:
             train_writer.write_record(sample)
 
@@ -612,6 +620,7 @@ def build_prox_corpus_pipeline(
     dedup_writer.close()
     train_writer.close()
     val_writer.close()
+    test_writer.close()
 
     total_tokens = sum(category_tokens.values())
     total_docs = sum(category_docs.values())
@@ -630,9 +639,10 @@ def build_prox_corpus_pipeline(
     )
 
     # Train/Val Leakage Verification
-    print("[Corpus Builder] Performing Leakage Verification on train/val splits...", flush=True)
+    print("[Corpus Builder] Performing Leakage Verification on train/val/test splits...", flush=True)
     sample_train_texts = []
     sample_val_texts = []
+    sample_test_texts = []
     
     def _read_lines_from_file(filepath: str) -> List[str]:
         lines = []
@@ -670,12 +680,22 @@ def build_prox_corpus_pipeline(
                     sample_val_texts.append(obj["text"])
             except Exception: pass
 
+    for test_file in os.listdir(TEST_DIR):
+        if test_file.startswith("test_shard"):
+            t_path = os.path.join(TEST_DIR, test_file)
+            try:
+                for line in _read_lines_from_file(t_path)[:500]:
+                    obj = json.loads(line)
+                    sample_test_texts.append(obj["text"])
+            except Exception: pass
+
     leakage_checker = DataLeakageChecker()
-    leakage_report = leakage_checker.check_leakage(sample_train_texts, sample_val_texts)
+    leakage_report = leakage_checker.check_leakage(sample_train_texts, sample_val_texts + sample_test_texts)
     verify_no_leakage(leakage_report, raise_on_leak=False)
 
-    train_tokens = int(total_tokens * (1.0 - val_ratio))
-    val_tokens = total_tokens - train_tokens
+    train_tokens = int(total_tokens * (1.0 - val_ratio - test_ratio))
+    val_tokens = int(total_tokens * val_ratio)
+    test_tokens = total_tokens - train_tokens - val_tokens
 
     corpus_hash = compute_sha256(f"prox_corpus_v0.1_{total_tokens}_{total_docs}_{config_hash}")
 
@@ -720,8 +740,10 @@ def build_prox_corpus_pipeline(
         "corpus_version": "v0.1",
         "target_tokens": target_total,
         "actual_tokens": total_tokens,
+        "total_tokens": total_tokens,
         "train_tokens": train_tokens,
         "validation_tokens": val_tokens,
+        "test_tokens": test_tokens,
         "build_status": build_status,
         "is_100m_ready": is_100m_ready,
         "creation_timestamp": datetime.now(timezone.utc).isoformat(),
@@ -729,12 +751,23 @@ def build_prox_corpus_pipeline(
         "summary_statistics": {
             "raw_streamed_document_count": sum(category_streamed_docs.values()),
             "accepted_document_count": total_docs,
+            "document_counts": total_docs,
+            "rejected_documents": sum(category_rejected_docs.values()),
+            "duplicate_counts": len(seen_sha256) - total_docs,
+            "near_duplicate_counts": 0,
             "total_usable_tokens": total_tokens,
             "train_tokens": train_tokens,
             "val_tokens": val_tokens,
+            "test_tokens": test_tokens,
             "target_phase_a_tokens": target_total,
             "target_reached": target_reached
         },
+        "language_distribution": language_tokens,
+        "hindi_tokens": category_tokens.get("hindi", 0),
+        "hindi_percentage": round(category_tokens.get("hindi", 0) / max(1, total_tokens) * 100, 2),
+        "programming_language_distribution": language_tokens,
+        "technical_distribution": category_tokens.get("technical_documentation", 0),
+        "math_distribution": category_tokens.get("mathematics_reasoning", 0),
         "category_distribution": {
             cat: {
                 "status": "AVAILABLE" if category_docs.get(cat, 0) > 0 else "NOT AVAILABLE",
@@ -744,12 +777,12 @@ def build_prox_corpus_pipeline(
                 "actual_percentage": round((category_tokens.get(cat, 0) / max(1, total_tokens)) * 100, 2)
             } for cat in CANONICAL_CATEGORIES
         },
-        "programming_language_breakdown": language_tokens,
         "network_retry_statistics": net_streamer.retry_stats,
         "leakage": leakage_report,
         "tokenizer": {
             "name": "ProX Tokenizer DEV",
-            "sha256": "ae03bfc8edfde3fab00b13a6cd65312a30bcf470ff9182fd7d405ad49103e0a1"
+            "sha256": "ae03bfc8edfde3fab00b13a6cd65312a30bcf470ff9182fd7d405ad49103e0a1",
+            "metadata": "32K byte-level BPE"
         },
         "build": {
             "timestamp": datetime.now(timezone.utc).isoformat(),

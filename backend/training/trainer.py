@@ -46,7 +46,7 @@ class NeurixTrainer:
         train_dataset,
         val_dataset,
         tokenizer: ProXTokenizer,
-        dataset_path: str = "./data/smoke_test.jsonl"
+        dataset_path: str
     ):
         self.model = model
         self.model_config = model_config
@@ -96,6 +96,7 @@ class NeurixTrainer:
             self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
 
         self.global_step = 0
+        self.micro_step = 0
         self.epoch = 0
 
         self.save_run_manifest()
@@ -162,7 +163,11 @@ class NeurixTrainer:
         if resume_path:
             chk = load_checkpoint(resume_path, self.model, self.optimizer, self.scheduler, self.device)
             self.global_step = chk.get("step", 0)
+            self.micro_step = self.global_step * self.t_config.gradient_accumulation_steps
             self.epoch = chk.get("epoch", 0)
+
+        tokens_per_step = self.t_config.batch_size * self.t_config.gradient_accumulation_steps * self.model_config.max_seq_len
+        estimated_total_tokens = tokens_per_step * self.t_config.max_steps
 
         print_resource_summary(
             model_name=self.model_config.name,
@@ -172,6 +177,7 @@ class NeurixTrainer:
             seq_len=self.model_config.max_seq_len,
             precision="AMP (FP16)" if self.use_amp else "FP32"
         )
+        print(f"[ProX Training] Token Budget: {tokens_per_step:,} tokens/step -> ~{estimated_total_tokens:,} total tokens")
 
         self.model.train()
         self.optimizer.zero_grad()
@@ -198,7 +204,7 @@ class NeurixTrainer:
                 else:
                     scaled_loss.backward()
 
-                if (self.global_step + 1) % self.t_config.gradient_accumulation_steps == 0:
+                if (self.micro_step + 1) % self.t_config.gradient_accumulation_steps == 0:
                     if self.use_amp:
                         self.scaler.unscale_(self.optimizer)
                         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.t_config.gradient_clip)
@@ -214,35 +220,38 @@ class NeurixTrainer:
 
                     self.scheduler.step()
                     self.optimizer.zero_grad()
+                    self.global_step += 1
 
-                self.global_step += 1
+                    if self.global_step % 10 == 0 or self.global_step == self.t_config.max_steps:
+                        lr = self.optimizer.param_groups[0]["lr"]
+                        elapsed = time.time() - start_time
+                        tok_per_sec = (x.numel() * self.t_config.gradient_accumulation_steps * 10) / max(0.001, elapsed)
+                        tokens_processed = self.global_step * tokens_per_step
+                        start_time = time.time()
+                        print(f"Step {self.global_step:06d}/{self.t_config.max_steps} | Loss: {loss.item():.4f} | LR: {lr:.6e} | Tokens: {tokens_processed:,}/{estimated_total_tokens:,} | Throughput: {tok_per_sec:.1f} tok/s")
 
-                if self.global_step % 10 == 0 or self.global_step == self.t_config.max_steps:
-                    lr = self.optimizer.param_groups[0]["lr"]
-                    elapsed = time.time() - start_time
-                    tok_per_sec = (x.numel() * 10) / max(0.001, elapsed)
-                    start_time = time.time()
-                    print(f"Step {self.global_step:06d}/{self.t_config.max_steps} | Loss: {loss.item():.4f} | LR: {lr:.6e} | Throughput: {tok_per_sec:.1f} tok/s")
+                    if self.global_step % self.c_config.save_every == 0 or self.global_step == self.t_config.max_steps:
+                        val_loss = self.evaluate()
+                        ppl = math.exp(min(20, val_loss))
+                        print(f"--> Validation Step {self.global_step} | Val Loss: {val_loss:.4f} | Perplexity: {ppl:.2f}")
 
-                if self.global_step % self.c_config.save_every == 0 or self.global_step == self.t_config.max_steps:
-                    val_loss = self.evaluate()
-                    ppl = math.exp(min(20, val_loss))
-                    print(f"--> Validation Step {self.global_step} | Val Loss: {val_loss:.4f} | Perplexity: {ppl:.2f}")
+                        save_checkpoint(
+                            output_dir=self.c_config.output_dir,
+                            step=self.global_step,
+                            epoch=self.epoch,
+                            model=self.model,
+                            optimizer=self.optimizer,
+                            scheduler=self.scheduler,
+                            model_config=self.model_config,
+                            training_config=self.t_config,
+                            metrics={"val_loss": val_loss, "perplexity": ppl}
+                        )
 
-                    save_checkpoint(
-                        output_dir=self.c_config.output_dir,
-                        step=self.global_step,
-                        epoch=self.epoch,
-                        model=self.model,
-                        optimizer=self.optimizer,
-                        scheduler=self.scheduler,
-                        model_config=self.model_config,
-                        training_config=self.t_config,
-                        metrics={"val_loss": val_loss, "perplexity": ppl}
-                    )
-
-                if self.global_step >= self.t_config.max_steps:
-                    break
+                    if self.global_step >= self.t_config.max_steps:
+                        break
+                self.micro_step += 1
+            if self.global_step >= self.t_config.max_steps:
+                break
 
         print("[Neurix Trainer] Training loop completed successfully.")
 
