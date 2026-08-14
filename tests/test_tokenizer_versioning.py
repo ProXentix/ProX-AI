@@ -6,6 +6,6 @@ def test_tokenizer_dev_versioning_and_fallback_enforcement():
     tok = ProXTokenizer(allow_fallback=True)
     assert tok.vocab_size > 0
 
-    # Non-existent tokenizer with allow_fallback=False must raise FileNotFoundError
-    with pytest.raises(FileNotFoundError):
+    # Non-existent tokenizer with allow_fallback=False must raise RuntimeError
+    with pytest.raises(RuntimeError):
         ProXTokenizer(tokenizer_path="./non_existent_dir/tokenizer.json", allow_fallback=False)

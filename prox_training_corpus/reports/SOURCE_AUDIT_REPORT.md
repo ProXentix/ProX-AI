@@ -1,6 +1,6 @@
 # PROX TRAINING CORPUS v0.1 — Dataset Source Audit Report
 
-**Date:** 2026-08-14 07:11 UTC  
+**Date:** 2026-08-14 08:41 UTC  
 **Hugging Face Authentication Status:** **HF authentication: NOT AVAILABLE**  
 **Pipeline Version:** v0.1  
 
@@ -10,7 +10,7 @@
 
 This audit evaluates all candidate data sources for pre-training preflight accessibility, authentication requirements, category mapping, and explicit fallback options.
 
-- **Total Data Sources Evaluated:** 12
+- **Total Data Sources Evaluated:** 14
 - **Hugging Face Token Status:** `NOT AVAILABLE` (Token value is never logged or stored)
 - **Gated Datasets Access:** DISABLED (Permissive Fallbacks Active)
 
@@ -32,6 +32,8 @@ This audit evaluates all candidate data sources for pre-training preflight acces
 | `CodeXGlue NL/Code Search` | `default` | `technical_documentation` | `en` | NO | **YES** | `None Required` | Apache-2.0 | `ACCESSIBLE` |
 | `AG News Sci/Tech` | `default` | `technical_documentation` | `en` | NO | **YES** | `None Required` | Academic / Public News | `ACCESSIBLE` |
 | `OpenWebMath` | `default` | `mathematics_reasoning` | `en` | NO | **YES** | `None Required` | ODC-By 1.0 | `ACCESSIBLE` |
+| `Sangraha (Hindi)` | `hindi` | `hindi` | `en` | NO | **YES** | `None Required` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha (Other Indic)` | `indic` | `other_indic` | `en` | NO | **YES** | `None Required` | Indic Permissive | `ACCESSIBLE` |
 
 ---
 

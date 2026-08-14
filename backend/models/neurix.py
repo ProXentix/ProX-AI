@@ -15,7 +15,7 @@ class RMSNorm(nn.Module):
         return x * torch.rsqrt(variance + self.eps) * self.weight
 
 class RotaryEmbedding(nn.Module):
-    def __init__(self, dim: int, max_seq_len: int = 2048):
+    def __init__(self, dim: int, max_seq_len: int = 4096):
         super().__init__()
         inv_freq = 1.0 / (10000.0 ** (torch.arange(0, dim, 2).float() / dim))
         t = torch.arange(max_seq_len).float()
@@ -39,7 +39,7 @@ def apply_rotary_pos_emb(q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, si
     return q_embed, k_embed
 
 class CausalSelfAttention(nn.Module):
-    def __init__(self, d_model: int, n_heads: int, max_seq_len: int = 2048):
+    def __init__(self, d_model: int, n_heads: int, max_seq_len: int = 4096):
         super().__init__()
         self.n_heads = n_heads
         self.head_dim = d_model // n_heads
@@ -84,7 +84,7 @@ class SwiGLUFFN(nn.Module):
         return self.w2(F.silu(self.w1(x)) * self.w3(x))
 
 class NeurixBlock(nn.Module):
-    def __init__(self, d_model: int, n_heads: int, d_ff: int, max_seq_len: int = 2048):
+    def __init__(self, d_model: int, n_heads: int, d_ff: int, max_seq_len: int = 4096):
         super().__init__()
         self.attn_norm = RMSNorm(d_model)
         self.attn = CausalSelfAttention(d_model, n_heads, max_seq_len)

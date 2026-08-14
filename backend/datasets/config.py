@@ -2,6 +2,8 @@ import os
 import json
 from typing import Dict, Any, List, Tuple, Optional
 
+PRODUCTION_MODE = os.environ.get("PROX_PRODUCTION_MODE", "0") == "1"
+
 TARGET_CONFIG: Dict[str, Any] = {
     "target_total_tokens": 1_000_000_000,
     "category_targets": {
@@ -170,25 +172,66 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
         "auth_required": False,
         "fallback": "None Required",
         "license": "ODC-By 1.0"
+    },
+    {
+        "dataset_name": "Sangraha (Hindi)",
+        "dataset_id": "ai4bharat/sangraha",
+        "subset": "hindi",
+        "category": "hindi",
+        "auth_required": False,
+        "fallback": "None Required",
+        "license": "Indic Permissive"
+    },
+    {
+        "dataset_name": "Sangraha (Other Indic)",
+        "dataset_id": "ai4bharat/sangraha",
+        "subset": "indic",
+        "category": "other_indic",
+        "auth_required": False,
+        "fallback": "None Required",
+        "license": "Indic Permissive"
     }
 ]
 
-def check_hf_authentication() -> Tuple[str, bool]:
-    """Returns safe preflight status ('AVAILABLE' / 'NOT AVAILABLE', is_authenticated: bool) without leaking token values."""
+def check_hf_authentication() -> Dict[str, Any]:
+    """Returns structured state about Hugging Face authentication."""
     token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
+    state = {
+        "authenticated": False,
+        "username": None,
+        "token_source": "HF_TOKEN" if os.getenv("HF_TOKEN") else ("HUGGINGFACE_TOKEN" if os.getenv("HUGGINGFACE_TOKEN") else "NONE"),
+        "api_reachable": False
+    }
+
     if not token or len(token.strip()) < 5:
-        return "NOT AVAILABLE", False
-    
+        try:
+            from huggingface_hub import get_token
+            token = get_token()
+            if token:
+                state["token_source"] = "huggingface_hub"
+        except Exception:
+            pass
+
+    if not token or len(token.strip()) < 5:
+        return state
+
     try:
         from huggingface_hub import HfApi
         api = HfApi()
         user_info = api.whoami(token=token.strip())
+        state["api_reachable"] = True
         if user_info and "name" in user_info:
-            return "AVAILABLE", True
-        return "AVAILABLE", True
+            state["authenticated"] = True
+            state["username"] = user_info["name"]
     except Exception:
-        # Fallback validation if HfApi fails or offline
-        return "AVAILABLE", True
+        import urllib.request
+        try:
+            urllib.request.urlopen("https://huggingface.co", timeout=3)
+            state["api_reachable"] = True
+        except Exception:
+            state["api_reachable"] = False
+            
+    return state
 
 def get_scaled_target_config(target_tokens: int) -> Dict[str, Any]:
     """Scales category targets proportionally for test builds (e.g. 100k, 1M, 10M)."""
@@ -215,21 +258,44 @@ def get_scaled_target_config(target_tokens: int) -> Dict[str, Any]:
     }
 
 def validate_target_config(config: Dict[str, Any]) -> bool:
-    """Validates that category targets sum exactly to the target_total_tokens."""
+    """Validates that category targets sum exactly to the target_total_tokens and meet production requirements."""
     cat_targets = config.get("category_targets", {})
     total_target = config.get("target_total_tokens", 0)
+    
+    if total_target <= 0:
+        raise ValueError(f"Configuration Error: target_total_tokens must be positive, got {total_target}")
+        
+    required_categories = {
+        "general_natural_language", "programming_languages", 
+        "technical_documentation", "hindi", "mathematics_reasoning", "other_indic"
+    }
+    
+    missing_cats = required_categories - set(cat_targets.keys())
+    if missing_cats:
+        raise ValueError(f"Configuration Error: Missing required categories: {missing_cats}")
+        
+    for cat, target in cat_targets.items():
+        if target < 0:
+            raise ValueError(f"Configuration Error: Category {cat} has negative target ({target})")
+
     sum_cats = sum(cat_targets.values())
     if sum_cats != total_target:
         raise ValueError(
             f"Configuration Error: Sum of category targets ({sum_cats:,}) "
             f"does not equal total target tokens ({total_target:,})."
         )
+        
+    val_ratio = config.get("validation_ratio", 0.0)
+    test_ratio = config.get("test_ratio", 0.0)
+    if not (0.0 <= val_ratio <= 1.0) or not (0.0 <= test_ratio <= 1.0) or (val_ratio + test_ratio >= 1.0):
+        raise ValueError(f"Configuration Error: Invalid split ratios (val={val_ratio}, test={test_ratio})")
+        
     return True
 
-def audit_dataset_sources(hf_token_status: str) -> List[Dict[str, Any]]:
+def audit_dataset_sources(hf_token_status: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Performs dry-run dataset accessibility audit without reading full dataset payloads."""
     audit_results = []
-    is_authenticated = hf_token_status == "AVAILABLE"
+    is_authenticated = hf_token_status.get("authenticated", False)
 
     for ds in DATASET_REGISTRY:
         ds_id = ds["dataset_id"]
@@ -237,7 +303,10 @@ def audit_dataset_sources(hf_token_status: str) -> List[Dict[str, Any]]:
 
         if auth_req and not is_authenticated:
             accessible = False
-            status = "GATED_UNAUTHENTICATED (Fallback Active)"
+            if PRODUCTION_MODE:
+                status = "GATED_UNAUTHENTICATED (FATAL: Production mode requires auth)"
+            else:
+                status = "GATED_UNAUTHENTICATED (Fallback Active)"
         else:
             accessible = True
             status = "ACCESSIBLE"
@@ -251,8 +320,10 @@ def audit_dataset_sources(hf_token_status: str) -> List[Dict[str, Any]]:
             "auth_required": auth_req,
             "accessible": accessible,
             "status": status,
-            "fallback": ds["fallback"],
-            "license": ds["license"]
+            "fallback": "DISABLED" if PRODUCTION_MODE else ds["fallback"],
+            "license": ds["license"],
+            "fallback_allowed": not PRODUCTION_MODE,
+            "production_allowed": True
         })
 
     return audit_results

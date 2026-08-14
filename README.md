@@ -1,9 +1,5 @@
 <h1 align="center">
-  <br>
-  <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/cpu.svg" alt="ProX AI" width="120">
-  <br>
   ProX AI
-  <br>
 </h1>
 
 <h4 align="center">A Production-Grade, Multi-Model AI Ecosystem Built from Scratch</h4>

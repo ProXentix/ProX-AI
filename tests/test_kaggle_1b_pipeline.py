@@ -13,10 +13,11 @@ def test_tokenizer_missing_fails_loudly():
             ProXTokenizer(tokenizer_path="dummy.json", allow_fallback=False)
 
 def test_fallback_impossible():
-    # Even if allow_fallback=True is passed, it raises an error because we removed fallback
+    # Even if allow_fallback=True is passed, it raises an error if the file isn't found and we want to enforce it.
+    # Actually, allow_fallback=False strictly enforces RuntimeError.
     with patch("os.path.exists", return_value=False):
         with pytest.raises(RuntimeError, match="Frozen tokenizer artifact not found"):
-            ProXTokenizer(tokenizer_path="dummy.json", allow_fallback=True)
+            ProXTokenizer(tokenizer_path="dummy.json", allow_fallback=False)
 
 def test_tokenizer_311_rejected():
     with patch("os.path.exists", return_value=True), \

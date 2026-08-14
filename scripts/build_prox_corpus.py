@@ -50,6 +50,7 @@ def load_existing_dedup_hashes(dedup_dir: str) -> Set[str]:
 
 from backend.datasets.categories import classify_document, DataCategory, CANONICAL_CATEGORIES
 from backend.datasets.config import (
+    PRODUCTION_MODE,
     TARGET_CONFIG,
     PROGRAMMING_LANGUAGE_TARGETS,
     PROGRAMMING_DATA_DIRS,
@@ -133,9 +134,10 @@ class TerminalProgressTracker:
             flush=True
         )
 
-def generate_source_audit_report(audit_results: List[Dict[str, Any]], hf_auth_status: str) -> str:
+def generate_source_audit_report(audit_results: List[Dict[str, Any]], hf_auth_state: Dict[str, Any]) -> str:
     ensure_corpus_directories()
     report_path = os.path.join(REPORTS_DIR, "SOURCE_AUDIT_REPORT.md")
+    hf_auth_status = "AVAILABLE" if hf_auth_state.get("authenticated") else "NOT AVAILABLE"
     
     rows = []
     for r in audit_results:
@@ -211,21 +213,23 @@ def build_prox_corpus_pipeline(
     val_ratio = config.get("validation_ratio", 0.05)
     test_ratio = config.get("test_ratio", 0.05)
 
-    hf_auth_status, is_hf_authenticated = check_hf_authentication()
+    hf_auth_state = check_hf_authentication()
+    is_hf_authenticated = hf_auth_state.get("authenticated", False)
+    hf_auth_status = "AVAILABLE" if is_hf_authenticated else "NOT AVAILABLE"
 
     print("=" * 75, flush=True)
     print(f"PROX AI — BUILD PROX TRAINING CORPUS v0.1 (Target: {target_total:,} tokens)", flush=True)
     print(f"Stage: {stage.upper()}")
     print("=" * 75, flush=True)
-    print(f"HF authentication: {hf_auth_status}", flush=True)
+    print(f"HF authentication: {hf_auth_status} (Username: {hf_auth_state.get('username')}, Source: {hf_auth_state.get('token_source')})", flush=True)
 
-    audit_results = audit_dataset_sources(hf_auth_status)
-    audit_report_path = generate_source_audit_report(audit_results, hf_auth_status)
+    audit_results = audit_dataset_sources(hf_auth_state)
+    audit_report_path = generate_source_audit_report(audit_results, hf_auth_state)
 
     if dry_run:
         print("\n--- PREFLIGHT DATASET SOURCE AUDIT SUMMARY ---", flush=True)
         print(f"Target Total Tokens: {target_total:,}", flush=True)
-        print(f"HF Authentication:   HF authentication: {hf_auth_status}", flush=True)
+        print(f"HF Authentication:   {hf_auth_status}", flush=True)
         print("\nDataset Accessibility Registry:", flush=True)
         for r in audit_results:
             print(f"  • {r['dataset_name']:<30} [{r['category']}]: Status = {r['status']}", flush=True)
@@ -257,6 +261,9 @@ def build_prox_corpus_pipeline(
     category_rejected_docs: Dict[str, int] = {cat: 0 for cat in CANONICAL_CATEGORIES}
     source_stats: Dict[str, Dict[str, Any]] = {}
     completed_datasets: Set[str] = set(checkpoint_mgr.state.get("completed_datasets", []))
+    
+    total_docs_seen = checkpoint_mgr.state.get("documents_seen", 0)
+    total_duplicates = checkpoint_mgr.state.get("duplicates", 0)
 
     # STAGE A: RAW CORPUS COLLECTION
     if stage in ["raw", "all"]:
@@ -291,6 +298,9 @@ def build_prox_corpus_pipeline(
             src = sample.get("dataset", "unknown")
             text = sample.get("text", "").strip()
 
+            nonlocal total_docs_seen, total_duplicates
+            total_docs_seen += 1
+
             if not text:
                 category_rejected_docs[cat] = category_rejected_docs.get(cat, 0) + 1
                 return False
@@ -312,6 +322,7 @@ def build_prox_corpus_pipeline(
             sample["sha256"] = sha
 
             if sha in seen_sha256:
+                total_duplicates += 1
                 category_rejected_docs[cat] = category_rejected_docs.get(cat, 0) + 1
                 return False
 
@@ -377,7 +388,7 @@ def build_prox_corpus_pipeline(
                 except Exception as e:
                     pass
                 
-                if category_chars[cat_key] < target:
+                if category_chars[cat_key] < target and not PRODUCTION_MODE:
                     try:
                         wiki_dataset = "wikimedia/wikipedia"
                         def get_wiki_stream(): return load_dataset(wiki_dataset, name="20231101.en", split="train", streaming=True)
@@ -397,6 +408,9 @@ def build_prox_corpus_pipeline(
                                     "sha256": compute_sha256(full_doc)
                                 })
                     except Exception as e2: pass
+                
+                if PRODUCTION_MODE and category_chars[cat_key] < target:
+                    raise RuntimeError(f"PRODUCTION_MODE: Failed to reach target for {cat_key} without fallbacks.")
 
         if single_category in [None, "programming_languages"]:
             cat_key = "programming_languages"
@@ -436,7 +450,7 @@ def build_prox_corpus_pipeline(
                                         "quality": f"permissive_{lang_key}_code", "sha256": compute_sha256(code)
                                     })
                         except Exception: pass
-                if category_chars[cat_key] < target:
+                if category_chars[cat_key] < target and not PRODUCTION_MODE:
                     try:
                         def get_cp_stream(): return load_dataset("codeparrot/codeparrot-clean-train", split="train", streaming=True)
                         for sample in net_streamer.safe_stream(get_cp_stream, "CodeParrot"):
@@ -451,6 +465,9 @@ def build_prox_corpus_pipeline(
                                     "source_id": f"codeparrot_{category_docs[cat_key]}_{repo[:30]}", "quality": "permissive_python_code", "sha256": compute_sha256(code)
                                 })
                     except Exception: pass
+                    
+                if PRODUCTION_MODE and category_chars[cat_key] < target:
+                    raise RuntimeError(f"PRODUCTION_MODE: Failed to reach target for {cat_key} without fallbacks.")
 
         if single_category in [None, "technical_documentation"]:
             cat_key = "technical_documentation"
@@ -519,13 +536,24 @@ def build_prox_corpus_pipeline(
         progress.update(total_chars, category_chars, "Finished", "Complete", total_docs, force=True)
         print("\n", flush=True)
 
+        try:
+            import subprocess
+            git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.STDOUT).decode("utf-8").strip()
+        except Exception:
+            git_commit = "unknown"
+
         checkpoint_mgr.save_checkpoint(
             config_hash=config_hash,
             category_chars=category_chars,
             category_docs=category_docs,
             language_chars=language_chars,
             completed_datasets=completed_datasets,
-            seen_sha256_count=len(seen_sha256)
+            seen_sha256_count=len(seen_sha256),
+            documents_seen=total_docs_seen,
+            documents_accepted=total_docs,
+            documents_rejected=sum(category_rejected_docs.values()),
+            duplicates=total_duplicates,
+            git_commit=git_commit
         )
 
         sources_manifest = {

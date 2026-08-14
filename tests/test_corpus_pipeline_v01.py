@@ -45,18 +45,20 @@ def test_target_config_validation():
         validate_target_config(invalid_config)
 
 def test_hf_authentication_preflight_formatting():
-    status_str, is_auth = check_hf_authentication()
-    assert status_str in ["AVAILABLE", "NOT AVAILABLE"]
-    assert isinstance(is_auth, bool)
+    from backend.datasets.config import check_hf_authentication
+    state = check_hf_authentication()
+    assert isinstance(state, dict)
+    assert "authenticated" in state
+    assert "api_reachable" in state
 
 def test_audit_dataset_sources():
-    audit_res = audit_dataset_sources("NOT AVAILABLE")
-    assert len(audit_res) > 0
-    for r in audit_res:
-        assert "dataset_name" in r
-        assert "category" in r
-        assert r["category"] != "proxpl"
-        assert "accessible" in r
+    from backend.datasets.config import audit_dataset_sources
+    state = {"authenticated": True, "api_reachable": True, "token_source": "TEST", "username": "testuser"}
+    audit = audit_dataset_sources(state)
+    assert isinstance(audit, list)
+    for res in audit:
+        assert res["accessible"] is True
+        assert "dataset_name" in res
 
 def test_deterministic_stratified_split():
     record1 = {"sha256": "abc123sha", "category": "general_natural_language", "language": "en", "source": "src1"}
@@ -73,19 +75,25 @@ def test_checkpoint_manager():
         mgr = CorpusCheckpointManager(checkpoint_path=chk_file)
         
         mgr.save_checkpoint(
-            config_hash="hash123",
-            category_tokens={"general_natural_language": 5000},
-            category_docs={"general_natural_language": 10},
-            language_tokens={"en": 5000},
-            completed_datasets={"fineweb"}
+            config_hash="abc",
+            category_chars={"general_natural_language": 500},
+            category_docs={"general_natural_language": 1},
+            language_chars={"en": 500},
+            completed_datasets=set(),
+            seen_sha256_count=1,
+            documents_seen=1,
+            documents_accepted=1,
+            documents_rejected=0,
+            duplicates=0,
+            git_commit="test"
         )
         
         mgr2 = CorpusCheckpointManager(checkpoint_path=chk_file)
-        loaded = mgr2.load_checkpoint(expected_config_hash="hash123")
+        loaded = mgr2.load_checkpoint(expected_config_hash="abc")
         assert loaded is True
-        assert mgr2.get_category_tokens("general_natural_language") == 5000
-        assert mgr2.is_category_complete("general_natural_language", 4000) is True
-        assert mgr2.is_category_complete("general_natural_language", 10000) is False
+        assert mgr2.state["category_chars"]["general_natural_language"] == 500
+        assert mgr2.is_category_complete("general_natural_language", 400) is True
+        assert mgr2.is_category_complete("general_natural_language", 1000) is False
 
 def test_sharded_corpus_writer():
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -140,6 +148,9 @@ def test_robust_network_streamer():
     assert items[0]["text"] == "hello"
 
 def test_source_audit_report_generation():
-    audit_results = audit_dataset_sources("NOT AVAILABLE")
-    report_path = generate_source_audit_report(audit_results, "NOT AVAILABLE")
+    from scripts.build_prox_corpus import generate_source_audit_report
+    state = {"authenticated": True, "api_reachable": True, "token_source": "TEST", "username": "testuser"}
+    audit = [{"dataset_name": "Test", "subset": "test", "category": "general", "status": "ACCESSIBLE", "accessible": True, "auth_required": False, "fallback": "N/A", "license": "MIT"}]
+    report_path = generate_source_audit_report(audit, state)
+    assert os.path.exists(report_path)
     assert os.path.exists(report_path)

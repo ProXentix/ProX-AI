@@ -142,6 +142,10 @@ class NeurixTrainer:
         print(f"[Trainer] Saved training run manifest to {manifest_path}")
 
     def evaluate(self) -> float:
+        rng_state = torch.get_rng_state()
+        if torch.cuda.is_available():
+            cuda_rng_state = torch.cuda.get_rng_state()
+            
         self.model.eval()
         total_loss = 0.0
         total_batches = 0
@@ -156,6 +160,11 @@ class NeurixTrainer:
                 if total_batches >= 20:
                     break
         self.model.train()
+        
+        torch.set_rng_state(rng_state)
+        if torch.cuda.is_available():
+            torch.cuda.set_rng_state(cuda_rng_state)
+            
         avg_loss = total_loss / max(1, total_batches)
         return avg_loss
 
@@ -205,11 +214,14 @@ class NeurixTrainer:
                     scaled_loss.backward()
 
                 if (self.micro_step + 1) % self.t_config.gradient_accumulation_steps == 0:
+                    skip_lr_sched = False
                     if self.use_amp:
                         self.scaler.unscale_(self.optimizer)
                         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.t_config.gradient_clip)
+                        scale_before = self.scaler.get_scale()
                         self.scaler.step(self.optimizer)
                         self.scaler.update()
+                        skip_lr_sched = (scale_before > self.scaler.get_scale())
                     else:
                         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.t_config.gradient_clip)
                         if self.device.type == "xla":
@@ -218,7 +230,8 @@ class NeurixTrainer:
                         else:
                             self.optimizer.step()
 
-                    self.scheduler.step()
+                    if not skip_lr_sched:
+                        self.scheduler.step()
                     self.optimizer.zero_grad()
                     self.global_step += 1
 
