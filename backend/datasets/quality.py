@@ -3,6 +3,7 @@ import hashlib
 import warnings
 import unicodedata
 import statistics
+import re
 from typing import List, Dict, Any, Union
 from backend.datasets.deduplication import DatasetDeduplicator
 from backend.tokenizer.tokenizer import ProXTokenizer
@@ -27,6 +28,59 @@ def validate_code_syntax(code: str, language: str = "python") -> Dict[str, Any]:
         return {"valid": False, "error": "Severely unbalanced syntax delimiters"}
 
     return {"valid": True, "error": None}
+
+def validate_hindi_text(text: str) -> bool:
+    """Validates that a Hindi document contains a reasonable amount of Devanagari text."""
+    if not text:
+        return False
+    
+    # Check for Devanagari characters (U+0900 - U+097F)
+    devanagari_chars = len(re.findall(r'[\u0900-\u097F]', text))
+    if devanagari_chars == 0:
+        return False
+        
+    # Count total alphabetic/letter characters to get a ratio
+    # We ignore spaces, punctuation, numbers
+    letters = [c for c in text if c.isalpha()]
+    total_letters = len(letters)
+    
+    if total_letters == 0:
+        return False
+        
+    # Allow reasonable mixed text (e.g. 15% devanagari letters)
+    ratio = devanagari_chars / total_letters
+    return ratio >= 0.15
+
+def detect_indic_language(text: str) -> str:
+    """Lightweight detection of Indic languages based on Unicode blocks."""
+    # Mapping of languages to their primary Unicode blocks
+    blocks = {
+        'bn': r'[\u0980-\u09FF]', # Bengali
+        'mr': r'[\u0900-\u097F]', # Marathi (Devanagari)
+        'gu': r'[\u0A80-\u0AFF]', # Gujarati
+        'pa': r'[\u0A00-\u0A7F]', # Gurmukhi (Punjabi)
+        'ta': r'[\u0B80-\u0BFF]', # Tamil
+        'te': r'[\u0C00-\u0C7F]', # Telugu
+        'kn': r'[\u0C80-\u0CFF]', # Kannada
+        'ml': r'[\u0D00-\u0D7F]', # Malayalam
+        'or': r'[\u0B00-\u0B7F]', # Odia
+        'as': r'[\u0980-\u09FF]', # Assamese (Shares Bengali block mostly)
+    }
+    
+    counts = {}
+    for lang, pattern in blocks.items():
+        if lang in ['mr', 'as']: # These share blocks with Hindi/Bengali, so we rely on dataset metadata primarily, but this is a fallback.
+            continue
+        matches = len(re.findall(pattern, text))
+        if matches > 0:
+            counts[lang] = matches
+            
+    if not counts:
+        return "unknown"
+        
+    # Return language with most characters
+    return max(counts.items(), key=lambda x: x[1])[0]
+
 
 def check_repetition_ratio(text: str, ngram_size: int = 10) -> float:
     """Returns ratio of repeated n-grams in text (0.0 = unique, 1.0 = highly repetitive)."""

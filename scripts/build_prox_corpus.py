@@ -158,7 +158,7 @@ from backend.datasets.config import (
     check_hf_authentication,
     audit_dataset_sources
 )
-from backend.datasets.quality import DatasetQualityPipeline, validate_code_syntax
+from backend.datasets.quality import DatasetQualityPipeline, validate_code_syntax, validate_hindi_text, detect_indic_language
 from backend.datasets.deduplication import DatasetDeduplicator, compute_sha256
 from backend.datasets.leakage import DataLeakageChecker, verify_no_leakage, verify_zero_repo_contamination
 from backend.datasets.checkpoint import CorpusCheckpointManager
@@ -231,6 +231,14 @@ class TerminalProgressTracker:
             end="",
             flush=True
         )
+        
+        # Display active category progress if it's Hindi or Other Indic
+        if current_category == "hindi":
+            cat_target = self.category_targets.get("hindi", 0) * 5
+            print(f"\n  Hindi: {category_tokens.get('hindi', 0):,} / {cat_target:,} chars\033[F", end="", flush=True)
+        elif current_category == "other_indic":
+            cat_target = self.category_targets.get("other_indic", 0) * 5
+            print(f"\n  Other Indic: {category_tokens.get('other_indic', 0):,} / {cat_target:,} chars\033[F", end="", flush=True)
 
 def generate_source_audit_report(audit_results: List[Dict[str, Any]], hf_auth_state: Dict[str, Any]) -> str:
     ensure_corpus_directories()
@@ -380,7 +388,8 @@ def build_prox_corpus_pipeline(
         
         category_chars: Dict[str, int] = {cat: 0 for cat in CANONICAL_CATEGORIES}
         language_chars: Dict[str, int] = {
-            "python": 0, "c": 0, "cpp": 0, "js": 0, "ts": 0, "rust": 0, "go": 0, "java": 0
+            "python": 0, "c": 0, "cpp": 0, "js": 0, "ts": 0, "rust": 0, "go": 0, "java": 0,
+            "hi": 0, "bn": 0, "mr": 0, "gu": 0, "pa": 0, "ta": 0, "te": 0, "kn": 0, "ml": 0, "or": 0, "as": 0
         }
 
         if resume or audit_resume:
@@ -400,11 +409,28 @@ def build_prox_corpus_pipeline(
             print("\n" + "="*50)
             print("AUDIT RESUME")
             print("="*50)
-            print(f"Checkpoint seen_sha256_count: {checkpoint_mgr.state.get('seen_sha256_count')}")
+            print(f"Checkpoint:                   {config_hash}")
             print(f"Actual dedup index count:     {len(seen_sha256)}")
             print(f"Completed datasets:           {list(completed_datasets)}")
             print(f"Failed datasets:              {list(failed_datasets)}")
-            print(f"Category progress:            {category_chars}")
+            print("\nCategory progress:")
+            for cat in ["general_natural_language", "programming_languages", "technical_documentation", "hindi", "mathematics_reasoning", "other_indic"]:
+                cur = category_chars.get(cat, 0)
+                tgt = raw_category_targets.get(cat, 0)
+                rem = max(0, tgt - cur)
+                pct = (cur / max(1, tgt)) * 100
+                print(f"  {cat}:")
+                print(f"    current chars:   {cur:,}")
+                print(f"    target chars:    {tgt:,}")
+                print(f"    remaining chars: {rem:,}")
+                print(f"    percentage:      {pct:.2f}%")
+            print("\nGLOBAL:")
+            g_cur = sum(category_chars.values())
+            g_tgt = raw_char_target_total
+            print(f"  Current raw chars: {g_cur:,}")
+            print(f"  Target raw chars:  {g_tgt:,}")
+            print(f"  Remaining raw chars: {max(0, g_tgt - g_cur):,}")
+            print(f"  Estimated tokens:  {g_cur // 5:,}")
             print("="*50 + "\n")
             return {"status": "AUDIT_COMPLETE"}
 
@@ -468,6 +494,11 @@ def build_prox_corpus_pipeline(
             if lang in ["py", "python"]:
                 syntax_check = validate_code_syntax(text, "python")
                 if not syntax_check["valid"]:
+                    category_rejected_docs[cat] = category_rejected_docs.get(cat, 0) + 1
+                    return False
+
+            if cat == "hindi":
+                if not validate_hindi_text(text):
                     category_rejected_docs[cat] = category_rejected_docs.get(cat, 0) + 1
                     return False
 
@@ -535,6 +566,14 @@ def build_prox_corpus_pipeline(
                     sample_processor(sample)
                 completed_datasets.add(dataset_name)
                 force_checkpoint(dataset_name, cat_key)
+                
+                # Source exhausted check
+                if category_chars[cat_key] < target:
+                    rem = target - category_chars[cat_key]
+                    print(f"\n[{cat_key.upper()} TARGET NOT REACHED]", flush=True)
+                    print(f"Current: {category_chars[cat_key]:,}", flush=True)
+                    print(f"Target: {target:,} chars", flush=True)
+                    print(f"Remaining: {rem:,}", flush=True)
             except Exception as e:
                 failed_datasets.add(dataset_name)
                 force_checkpoint(dataset_name, cat_key)
@@ -685,6 +724,59 @@ def build_prox_corpus_pipeline(
                         })
                 run_source_stream("OpenWebMath", "OpenWebMath", cat_key, target, lambda: load_dataset("open-web-math/open-web-math", split="train", streaming=True), owm_processor)
 
+        if single_category in [None, "hindi"]:
+            cat_key = "hindi"
+            target = raw_category_targets[cat_key]
+            if category_chars[cat_key] < target:
+                print(f"\n[Corpus Builder] Category: Hindi (Target: {target:,} chars)", flush=True)
+                def hindi_processor(sample):
+                    text = sample.get("text", "").strip()
+                    if len(text) > 100:
+                        process_and_write_sample({
+                            "text": text, "category": cat_key, "language": "hi", "source": "ai4bharat/sangraha",
+                            "dataset": "Sangraha (Hindi)", "license": "Indic Permissive",
+                            "source_url": "https://huggingface.co/datasets/ai4bharat/sangraha",
+                            "source_id": f"sangraha_hi_{category_docs.get(cat_key, 0)}",
+                            "quality": "devanagari_mixed", "sha256": compute_sha256(text)
+                        })
+                run_source_stream("ai4bharat/sangraha_hindi", "Sangraha (Hindi)", cat_key, target, lambda: load_dataset("ai4bharat/sangraha", name="hindi", split="train", streaming=True), hindi_processor)
+
+        if single_category in [None, "other_indic"]:
+            cat_key = "other_indic"
+            target = raw_category_targets[cat_key]
+            if category_chars[cat_key] < target:
+                print(f"\n[Corpus Builder] Category: Other Indic (Target: {target:,} chars)", flush=True)
+                
+                # Setup language balancing state
+                if not hasattr(net_streamer, 'indic_counts_printed'):
+                    net_streamer.indic_counts_printed = time.time()
+                    
+                def indic_processor(sample):
+                    text = sample.get("text", "").strip()
+                    lang = sample.get("language", detect_indic_language(text))
+                    if lang == "unknown":
+                        lang = "indic_misc"
+                        
+                    if len(text) > 100:
+                        process_and_write_sample({
+                            "text": text, "category": cat_key, "language": lang, "source": "ai4bharat/sangraha",
+                            "dataset": "Sangraha (Other Indic)", "license": "Indic Permissive",
+                            "source_url": "https://huggingface.co/datasets/ai4bharat/sangraha",
+                            "source_id": f"sangraha_indic_{category_docs.get(cat_key, 0)}",
+                            "quality": "indic_mixed", "sha256": compute_sha256(text)
+                        })
+                        
+                    # Periodically print indic stats
+                    now = time.time()
+                    if now - getattr(net_streamer, 'indic_counts_printed', 0) > 60:  # Print every 60s
+                        net_streamer.indic_counts_printed = now
+                        print("\n\nOther Indic Stats:")
+                        for l in ["bn", "mr", "gu", "pa", "ta", "te", "kn", "ml", "or", "as"]:
+                            print(f"{l.title()}: {language_chars.get(l, 0):,}")
+                        print("\033[F" * 12, end="", flush=True)  # Move cursor back up
+                        
+                run_source_stream("ai4bharat/sangraha_indic", "Sangraha (Other Indic)", cat_key, target, lambda: load_dataset("ai4bharat/sangraha", name="indic", split="train", streaming=True), indic_processor)
+
         raw_writer.close()
         train_raw_writer.close()
         val_raw_writer.close()
@@ -695,6 +787,13 @@ def build_prox_corpus_pipeline(
         total_docs = sum(category_docs.values())
         progress.update(total_chars, category_chars, "Finished", "Complete", total_docs, force=True)
         print("\n", flush=True)
+        
+        incomplete_categories = []
+        for cat, tgt in raw_category_targets.items():
+            if single_category is not None and cat != single_category:
+                continue
+            if category_chars.get(cat, 0) < tgt:
+                incomplete_categories.append((cat, category_chars.get(cat, 0), tgt))
 
         try:
             import subprocess
@@ -709,8 +808,8 @@ def build_prox_corpus_pipeline(
             language_chars=language_chars,
             completed_datasets=list(completed_datasets),
             failed_datasets=list(failed_datasets),
-            active_dataset="Completed",
-            active_category="Finished",
+            active_dataset="Completed" if not incomplete_categories else "Incomplete",
+            active_category="Finished" if not incomplete_categories else "Incomplete",
             seen_sha256_count=len(seen_sha256),
             documents_seen=total_docs_seen,
             documents_accepted=total_docs,
@@ -729,6 +828,15 @@ def build_prox_corpus_pipeline(
         }
         with open(os.path.join(MANIFESTS_DIR, "sources_manifest.json"), "w", encoding="utf-8") as f:
             json.dump(sources_manifest, f, indent=2)
+
+        if incomplete_categories:
+            print("\n[CORPUS INCOMPLETE]", flush=True)
+            for cat, curr, tgt in incomplete_categories:
+                rem = max(0, tgt - curr)
+                print(f"Category: {cat}\nCurrent chars: {curr:,}\nTarget chars: {tgt:,}\nRemaining chars: {rem:,}\n", flush=True)
+            
+            print("[RAW STAGE ABORTED] Pipeline will not proceed until all category targets are reached.", flush=True)
+            return {"status": "INCOMPLETE", "missing_categories": incomplete_categories}
 
     # STAGE B: TOKENIZE FINAL CORPUS
     if stage in ["tokenize", "all"]:
