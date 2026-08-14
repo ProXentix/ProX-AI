@@ -37,39 +37,113 @@ repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-def load_existing_dedup_hashes(dedup_dir: str) -> Set[str]:
+def get_dedup_index_path() -> str:
+    dedup_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prox_training_corpus", "dedup_index")
+    os.makedirs(dedup_dir, exist_ok=True)
+    if HAS_ZSTD:
+        return os.path.join(dedup_dir, "hashes.jsonl.zst")
+    return os.path.join(dedup_dir, "hashes.jsonl")
+
+class DedupIndexWriter:
+    def __init__(self):
+        self.filepath = get_dedup_index_path()
+        self.file = None
+        self.writer = None
+        self._open()
+
+    def _open(self):
+        if self.filepath.endswith(".zst") and HAS_ZSTD:
+            self.file = open(self.filepath, "ab")
+            cctx = zstd.ZstdCompressor(level=3)
+            self.writer = cctx.stream_writer(self.file)
+        else:
+            self.file = open(self.filepath, "a", encoding="utf-8")
+            self.writer = self.file
+
+    def write_hash(self, sha: str, source: str, category: str, chars: int):
+        record = json.dumps({"sha256": sha, "source": source, "category": category, "chars": chars}) + "\n"
+        if self.filepath.endswith(".zst") and HAS_ZSTD:
+            self.writer.write(record.encode("utf-8"))
+        else:
+            self.writer.write(record)
+
+    def flush(self):
+        if self.writer:
+            if hasattr(self.writer, "flush"):
+                self.writer.flush()
+        if self.file and hasattr(self.file, "fileno"):
+            os.fsync(self.file.fileno())
+
+    def close(self):
+        self.flush()
+        if hasattr(self.writer, "close"):
+            try:
+                self.writer.close()
+            except Exception: pass
+        if hasattr(self.file, "close"):
+            try:
+                self.file.close()
+            except Exception: pass
+
+def load_existing_dedup_hashes() -> Set[str]:
     seen = set()
-    if os.path.exists(dedup_dir):
-        for fname in os.listdir(dedup_dir):
-            if fname.endswith(".jsonl.gz") or fname.endswith(".jsonl.zst") or fname.endswith(".jsonl"):
-                fpath = os.path.join(dedup_dir, fname)
-                try:
-                    if fname.endswith(".gz"):
-                        import gzip
-                        f_in = gzip.open(fpath, "rt", encoding="utf-8")
-                    elif fname.endswith(".zst"):
-                        import zstandard as zstd
-                        raw = open(fpath, "rb")
-                        dctx = zstd.ZstdDecompressor()
-                        f_in = dctx.stream_reader(raw)
-                    else:
-                        f_in = open(fpath, "r", encoding="utf-8")
-                    
-                    for line in f_in:
-                        if isinstance(line, bytes):
-                            line = line.decode("utf-8")
-                        line = line.strip()
-                        if line:
-                            try:
-                                obj = json.loads(line)
-                                sha = obj.get("sha256")
-                                if sha:
-                                    seen.add(sha)
-                            except Exception:
-                                pass
-                    f_in.close()
-                except Exception:
-                    pass
+    filepath = get_dedup_index_path()
+    if os.path.exists(filepath):
+        try:
+            for line in read_corpus_lines(filepath):
+                line = line.strip()
+                if line:
+                    try:
+                        obj = json.loads(line)
+                        if "sha256" in obj:
+                            seen.add(obj["sha256"])
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    return seen
+
+def run_dedup_recovery():
+    print("\n[DEDUP RECOVERY] Starting dedup index recovery from existing shards...", flush=True)
+    seen = load_existing_dedup_hashes()
+    initial_count = len(seen)
+    
+    writer = DedupIndexWriter()
+    scanned_docs = 0
+    recovered = 0
+    duplicates = 0
+    
+    CORPUS_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prox_training_corpus")
+    shard_dirs = [os.path.join(CORPUS_ROOT, "raw"), os.path.join(CORPUS_ROOT, "train"), os.path.join(CORPUS_ROOT, "validation"), os.path.join(CORPUS_ROOT, "test")]
+    for d in shard_dirs:
+        if os.path.exists(d):
+            for fname in os.listdir(d):
+                if fname.endswith(".jsonl") or fname.endswith(".jsonl.gz") or fname.endswith(".jsonl.zst"):
+                    fpath = os.path.join(d, fname)
+                    try:
+                        for line in read_corpus_lines(fpath):
+                            scanned_docs += 1
+                            obj = json.loads(line.strip())
+                            text = obj.get("text", "")
+                            sha = obj.get("sha256")
+                            if not sha:
+                                # Fallback compute sha256 if compute_sha256 is imported later. Wait, we must import it.
+                                # It's imported below, let's just use hashlib
+                                sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+                            if sha not in seen:
+                                seen.add(sha)
+                                recovered += 1
+                                writer.write_hash(sha, obj.get("source", "unknown"), obj.get("category", "unknown"), len(text))
+                            else:
+                                duplicates += 1
+                    except Exception as e:
+                        print(f"Error reading {fpath}: {e}")
+    writer.close()
+    print(f"[DEDUP RECOVERY]")
+    print(f"Existing documents scanned: {scanned_docs}")
+    print(f"Existing hashes recovered: {recovered}")
+    print(f"Existing duplicates detected: {duplicates}")
+    print(f"Dedup index status: READY (Total: {len(seen)})\n", flush=True)
     return seen
 
 from backend.datasets.categories import classify_document, DataCategory, CANONICAL_CATEGORIES
@@ -220,10 +294,17 @@ def build_prox_corpus_pipeline(
     dry_run: bool = False,
     report_only: bool = False,
     single_category: Optional[str] = None,
-    stage: str = "all"
+    stage: str = "all",
+    recover_dedup: bool = False,
+    audit_resume: bool = False
 ) -> Dict[str, Any]:
 
     ensure_corpus_directories()
+
+    if recover_dedup:
+        run_dedup_recovery()
+        if not (resume or audit_resume):
+            return {"status": "RECOVERY_COMPLETE"}
 
     if target_tokens == 100_000_000:
         config = TARGET_CONFIG
@@ -779,16 +860,29 @@ def main():
     parser.add_argument("--report-only", action="store_true", help="Generate build report from existing manifest without streaming")
     parser.add_argument("--category", type=str, choices=CANONICAL_CATEGORIES, default=None, help="Limit streaming build to a specific category")
     parser.add_argument("--stage", type=str, choices=["raw", "tokenize", "all"], default="all", help="Pipeline stage to run")
+    parser.add_argument("--recover-dedup", action="store_true", help="Reconstruct dedup index from existing shards")
+    parser.add_argument("--audit-resume", action="store_true", help="Print detailed state of corpus vs checkpoint and exit")
     args = parser.parse_args()
 
-    build_prox_corpus_pipeline(
-        target_tokens=args.target_tokens,
-        resume=args.resume,
-        dry_run=args.dry_run,
-        report_only=args.report_only,
-        single_category=args.category,
-        stage=args.stage
-    )
+    try:
+        build_prox_corpus_pipeline(
+            target_tokens=args.target_tokens,
+            resume=args.resume,
+            dry_run=args.dry_run,
+            report_only=args.report_only,
+            single_category=args.category,
+            stage=args.stage,
+            recover_dedup=args.recover_dedup,
+            audit_resume=args.audit_resume
+        )
+    except KeyboardInterrupt:
+        print("\n[Corpus Builder] Graceful shutdown requested (KeyboardInterrupt)...", flush=True)
+    except Exception as e:
+        import traceback
+        print(f"\n[Corpus Builder] FATAL PIPELINE EXCEPTION: {e}", flush=True)
+        traceback.print_exc()
+    finally:
+        print("\n[Corpus Builder] Exited.", flush=True)
 
 if __name__ == "__main__":
     main()

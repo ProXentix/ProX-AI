@@ -41,15 +41,19 @@ class RobustNetworkStreamer:
         self.max_retries = max_retries
         self.initial_backoff = initial_backoff
         self.retry_stats = {
+            "NETWORK_RETRY_ATTEMPT": 0,
             "NETWORK_RETRY_SUCCESS": 0,
             "NETWORK_RETRY_EXHAUSTED": 0,
             "SOURCE_FAILED": 0,
+            "UNEXPECTED_SOURCE_ERROR": 0,
             "SOURCE_FALLBACK_USED": 0
         }
 
     def safe_stream(self, dataset_generator_builder: Callable[[], Generator[Dict[str, Any], None, None]], source_name: str) -> Generator[Dict[str, Any], None, None]:
+        import random
         retries = 0
         backoff = self.initial_backoff
+        max_backoff = 300.0
         
         while retries <= self.max_retries:
             ds_iter = None
@@ -61,9 +65,12 @@ class RobustNetworkStreamer:
                 return
             except GeneratorExit:
                 return
-            except (OSError, socket.error, TimeoutError, ConnectionResetError, Exception) as e:
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except (OSError, socket.error, TimeoutError, ConnectionResetError, ConnectionError) as e:
                 err_str = str(e)
                 retries += 1
+                self.retry_stats["NETWORK_RETRY_ATTEMPT"] += 1
                 if retries > self.max_retries:
                     print(f"[{source_name}] NETWORK_RETRY_EXHAUSTED after {self.max_retries} attempts: {err_str}", flush=True)
                     self.retry_stats["NETWORK_RETRY_EXHAUSTED"] += 1
@@ -76,17 +83,18 @@ class RobustNetworkStreamer:
                     flush=True
                 )
                 self.retry_stats["NETWORK_RETRY_SUCCESS"] += 1
-                time.sleep(backoff)
-                backoff *= 2.0
+                time.sleep(backoff + random.uniform(-0.1, 0.1) * backoff)
+                backoff = min(max_backoff, backoff * 2.0)
+            except Exception as e:
+                err_str = str(e)
+                print(f"[{source_name}] UNEXPECTED_SOURCE_ERROR: {err_str}", flush=True)
+                self.retry_stats["UNEXPECTED_SOURCE_ERROR"] += 1
+                self.retry_stats["SOURCE_FAILED"] += 1
+                raise e
             finally:
                 if ds_iter is not None:
                     if hasattr(ds_iter, "close") and callable(getattr(ds_iter, "close")):
                         try:
                             ds_iter.close()
-                        except Exception:
-                            pass
-                    if hasattr(ds_iter, "_ex_iterable") and hasattr(ds_iter._ex_iterable, "close") and callable(getattr(ds_iter._ex_iterable, "close")):
-                        try:
-                            ds_iter._ex_iterable.close()
                         except Exception:
                             pass

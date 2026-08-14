@@ -86,7 +86,24 @@ class ShardedCorpusWriter:
         self.current_record_count += 1
         self.total_records_written += 1
 
+    def flush(self):
+        if self.current_file is not None:
+            try:
+                if hasattr(self.current_file, "flush"):
+                    self.current_file.flush()
+            except Exception:
+                pass
+        if self._raw_file is not None:
+            try:
+                if hasattr(self._raw_file, "flush"):
+                    self._raw_file.flush()
+                if hasattr(self._raw_file, "fileno"):
+                    os.fsync(self._raw_file.fileno())
+            except Exception:
+                pass
+
     def close(self):
+        self.flush()
         if self.current_file is not None:
             try:
                 self.current_file.close()

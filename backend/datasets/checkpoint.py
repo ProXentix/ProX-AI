@@ -32,11 +32,16 @@ class CorpusCheckpointManager:
             "category_docs": {},
             "language_chars": {},
             "completed_datasets": [],
+            "failed_datasets": [],
+            "active_dataset": "",
+            "active_category": "",
             "seen_sha256_count": 0,
             "documents_seen": 0,
             "documents_accepted": 0,
             "documents_rejected": 0,
-            "duplicates": 0
+            "duplicates": 0,
+            "retry_statistics": {},
+            "source_statistics": {}
         }
 
     def load_checkpoint(self, expected_config_hash: Optional[str] = None) -> bool:
@@ -55,7 +60,7 @@ class CorpusCheckpointManager:
                     return False
                     
                 if expected_config_hash and data.get("configuration_hash") != expected_config_hash:
-                    print(f"[Checkpoint] Configuration hash mismatch. Invalidating checkpoint.")
+                    print(f"[Checkpoint] Configuration hash mismatch. Expected {expected_config_hash}, got {data.get('configuration_hash')}")
                     return False
                 
                 self.state = data
@@ -71,12 +76,17 @@ class CorpusCheckpointManager:
         category_chars: Dict[str, int],
         category_docs: Dict[str, int],
         language_chars: Dict[str, int],
-        completed_datasets: Set[str],
+        completed_datasets: list,
+        failed_datasets: list = None,
+        active_dataset: str = "",
+        active_category: str = "",
         seen_sha256_count: int = 0,
         documents_seen: int = 0,
         documents_accepted: int = 0,
         documents_rejected: int = 0,
         duplicates: int = 0,
+        retry_statistics: Dict[str, int] = None,
+        source_statistics: Dict[str, Any] = None,
         git_commit: str = "unknown"
     ):
         self.state["configuration_hash"] = config_hash
@@ -84,12 +94,17 @@ class CorpusCheckpointManager:
         self.state["category_chars"] = category_chars
         self.state["category_docs"] = category_docs
         self.state["language_chars"] = language_chars
-        self.state["completed_datasets"] = list(completed_datasets)
+        self.state["completed_datasets"] = completed_datasets
+        self.state["failed_datasets"] = failed_datasets or []
+        self.state["active_dataset"] = active_dataset
+        self.state["active_category"] = active_category
         self.state["seen_sha256_count"] = seen_sha256_count
         self.state["documents_seen"] = documents_seen
         self.state["documents_accepted"] = documents_accepted
         self.state["documents_rejected"] = documents_rejected
         self.state["duplicates"] = duplicates
+        self.state["retry_statistics"] = retry_statistics or {}
+        self.state["source_statistics"] = source_statistics or {}
         self.state["git_commit"] = git_commit
 
         try:
