@@ -94,8 +94,8 @@ class CorpusCheckpointManager:
         self.state["category_chars"] = category_chars
         self.state["category_docs"] = category_docs
         self.state["language_chars"] = language_chars
-        self.state["completed_datasets"] = completed_datasets
-        self.state["failed_datasets"] = failed_datasets or []
+        self.state["completed_datasets"] = list(completed_datasets) if completed_datasets is not None else []
+        self.state["failed_datasets"] = list(failed_datasets) if failed_datasets is not None else []
         self.state["active_dataset"] = active_dataset
         self.state["active_category"] = active_category
         self.state["seen_sha256_count"] = seen_sha256_count
