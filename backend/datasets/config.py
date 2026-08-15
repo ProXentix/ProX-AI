@@ -174,24 +174,34 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
         "license": "ODC-By 1.0"
     },
     {
-        "dataset_name": "Sangraha (Hindi)",
+        "dataset_name": "Sangraha Verified (Hindi)",
         "dataset_id": "ai4bharat/sangraha",
-        "subset": "hindi",
+        "subset": "verified/hin",
         "category": "hindi",
+        "language": "hi",
         "auth_required": False,
-        "fallback": "None Required",
-        "license": "Indic Permissive"
-    },
-    {
-        "dataset_name": "Sangraha (Other Indic)",
-        "dataset_id": "ai4bharat/sangraha",
-        "subset": "indic",
-        "category": "other_indic",
-        "auth_required": False,
-        "fallback": "None Required",
+        "fallback": "ai4bharat/sangraha (unverified/hin)",
         "license": "Indic Permissive"
     }
 ]
+
+_INDIC_LANGS = {
+    "ben": "bn", "guj": "gu", "kan": "kn", "mal": "ml",
+    "mar": "mr", "ori": "or", "pan": "pa", "tam": "ta",
+    "tel": "te", "urd": "ur"
+}
+
+for _lang_code, _iso_code in _INDIC_LANGS.items():
+    DATASET_REGISTRY.append({
+        "dataset_name": f"Sangraha Verified ({_lang_code})",
+        "dataset_id": "ai4bharat/sangraha",
+        "subset": f"verified/{_lang_code}",
+        "category": "other_indic",
+        "language": _iso_code,
+        "auth_required": False,
+        "fallback": f"ai4bharat/sangraha (unverified/{_lang_code})",
+        "license": "Indic Permissive"
+    })
 
 def check_hf_authentication() -> Dict[str, Any]:
     """Returns structured state about Hugging Face authentication."""

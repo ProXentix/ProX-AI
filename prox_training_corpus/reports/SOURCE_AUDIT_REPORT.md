@@ -1,6 +1,6 @@
 # PROX TRAINING CORPUS v0.1 — Dataset Source Audit Report
 
-**Date:** 2026-08-14 08:52 UTC  
+**Date:** 2026-08-15 09:33 UTC  
 **Hugging Face Authentication Status:** **HF authentication: NOT AVAILABLE**  
 **Pipeline Version:** v0.1  
 
@@ -10,7 +10,7 @@
 
 This audit evaluates all candidate data sources for pre-training preflight accessibility, authentication requirements, category mapping, and explicit fallback options.
 
-- **Total Data Sources Evaluated:** 14
+- **Total Data Sources Evaluated:** 23
 - **Hugging Face Token Status:** `NOT AVAILABLE` (Token value is never logged or stored)
 - **Gated Datasets Access:** DISABLED (Permissive Fallbacks Active)
 
@@ -32,8 +32,17 @@ This audit evaluates all candidate data sources for pre-training preflight acces
 | `CodeXGlue NL/Code Search` | `default` | `technical_documentation` | `en` | NO | **YES** | `None Required` | Apache-2.0 | `ACCESSIBLE` |
 | `AG News Sci/Tech` | `default` | `technical_documentation` | `en` | NO | **YES** | `None Required` | Academic / Public News | `ACCESSIBLE` |
 | `OpenWebMath` | `default` | `mathematics_reasoning` | `en` | NO | **YES** | `None Required` | ODC-By 1.0 | `ACCESSIBLE` |
-| `Sangraha (Hindi)` | `hindi` | `hindi` | `en` | NO | **YES** | `None Required` | Indic Permissive | `ACCESSIBLE` |
-| `Sangraha (Other Indic)` | `indic` | `other_indic` | `en` | NO | **YES** | `None Required` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (Hindi)` | `verified/hin` | `hindi` | `hi` | NO | **YES** | `ai4bharat/sangraha (unverified/hin)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (ben)` | `verified/ben` | `other_indic` | `bn` | NO | **YES** | `ai4bharat/sangraha (unverified/ben)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (guj)` | `verified/guj` | `other_indic` | `gu` | NO | **YES** | `ai4bharat/sangraha (unverified/guj)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (kan)` | `verified/kan` | `other_indic` | `kn` | NO | **YES** | `ai4bharat/sangraha (unverified/kan)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (mal)` | `verified/mal` | `other_indic` | `ml` | NO | **YES** | `ai4bharat/sangraha (unverified/mal)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (mar)` | `verified/mar` | `other_indic` | `mr` | NO | **YES** | `ai4bharat/sangraha (unverified/mar)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (ori)` | `verified/ori` | `other_indic` | `or` | NO | **YES** | `ai4bharat/sangraha (unverified/ori)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (pan)` | `verified/pan` | `other_indic` | `pa` | NO | **YES** | `ai4bharat/sangraha (unverified/pan)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (tam)` | `verified/tam` | `other_indic` | `ta` | NO | **YES** | `ai4bharat/sangraha (unverified/tam)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (tel)` | `verified/tel` | `other_indic` | `te` | NO | **YES** | `ai4bharat/sangraha (unverified/tel)` | Indic Permissive | `ACCESSIBLE` |
+| `Sangraha Verified (urd)` | `verified/urd` | `other_indic` | `ur` | NO | **YES** | `ai4bharat/sangraha (unverified/urd)` | Indic Permissive | `ACCESSIBLE` |
 
 ---
 

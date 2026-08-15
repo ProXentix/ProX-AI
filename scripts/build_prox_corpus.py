@@ -729,17 +729,19 @@ def build_prox_corpus_pipeline(
             target = raw_category_targets[cat_key]
             if category_chars[cat_key] < target:
                 print(f"\n[Corpus Builder] Category: Hindi (Target: {target:,} chars)", flush=True)
-                def hindi_processor(sample):
+                def hindi_processor(sample, quality="devanagari_mixed"):
                     text = sample.get("text", "").strip()
                     if len(text) > 100:
                         process_and_write_sample({
                             "text": text, "category": cat_key, "language": "hi", "source": "ai4bharat/sangraha",
-                            "dataset": "Sangraha (Hindi)", "license": "Indic Permissive",
+                            "dataset": "Sangraha Verified (Hindi)" if "verified" in quality else "Sangraha Unverified (Hindi)", "license": "Indic Permissive",
                             "source_url": "https://huggingface.co/datasets/ai4bharat/sangraha",
                             "source_id": f"sangraha_hi_{category_docs.get(cat_key, 0)}",
-                            "quality": "devanagari_mixed", "sha256": compute_sha256(text)
+                            "quality": quality, "sha256": compute_sha256(text)
                         })
-                run_source_stream("ai4bharat/sangraha_hindi", "Sangraha (Hindi)", cat_key, target, lambda: load_dataset("ai4bharat/sangraha", name="hindi", split="train", streaming=True), hindi_processor)
+                run_source_stream("sangraha_verified_hin", "Sangraha Verified (Hindi)", cat_key, target, lambda: load_dataset("ai4bharat/sangraha", data_dir="verified/hin", split="train", streaming=True), lambda s: hindi_processor(s, "devanagari_mixed_verified"))
+                if category_chars[cat_key] < target:
+                    run_source_stream("sangraha_unverified_hin", "Sangraha Unverified (Hindi)", cat_key, target, lambda: load_dataset("ai4bharat/sangraha", data_dir="unverified/hin", split="train", streaming=True), lambda s: hindi_processor(s, "devanagari_mixed_unverified"))
 
         if single_category in [None, "other_indic"]:
             cat_key = "other_indic"
@@ -751,19 +753,17 @@ def build_prox_corpus_pipeline(
                 if not hasattr(net_streamer, 'indic_counts_printed'):
                     net_streamer.indic_counts_printed = time.time()
                     
-                def indic_processor(sample):
+                def indic_processor_for_lang(sample, lang_code, iso, quality="indic_mixed"):
                     text = sample.get("text", "").strip()
-                    lang = sample.get("language", detect_indic_language(text))
-                    if lang == "unknown":
-                        lang = "indic_misc"
-                        
+                    lang = sample.get("language", iso)
                     if len(text) > 100:
+                        dataset_title = f"Sangraha Verified ({lang_code})" if "verified" in quality else f"Sangraha Unverified ({lang_code})"
                         process_and_write_sample({
                             "text": text, "category": cat_key, "language": lang, "source": "ai4bharat/sangraha",
-                            "dataset": "Sangraha (Other Indic)", "license": "Indic Permissive",
+                            "dataset": dataset_title, "license": "Indic Permissive",
                             "source_url": "https://huggingface.co/datasets/ai4bharat/sangraha",
-                            "source_id": f"sangraha_indic_{category_docs.get(cat_key, 0)}",
-                            "quality": "indic_mixed", "sha256": compute_sha256(text)
+                            "source_id": f"sangraha_{lang_code}_{category_docs.get(cat_key, 0)}",
+                            "quality": quality, "sha256": compute_sha256(text)
                         })
                         
                     # Periodically print indic stats
@@ -775,7 +775,18 @@ def build_prox_corpus_pipeline(
                             print(f"{l.title()}: {language_chars.get(l, 0):,}")
                         print("\033[F" * 12, end="", flush=True)  # Move cursor back up
                         
-                run_source_stream("ai4bharat/sangraha_indic", "Sangraha (Other Indic)", cat_key, target, lambda: load_dataset("ai4bharat/sangraha", name="indic", split="train", streaming=True), indic_processor)
+                indic_langs = {
+                    "ben": "bn", "guj": "gu", "kan": "kn", "mal": "ml",
+                    "mar": "mr", "ori": "or", "pan": "pa", "tam": "ta",
+                    "tel": "te", "urd": "ur"
+                }
+                
+                for lang_code, iso in indic_langs.items():
+                    run_source_stream(f"sangraha_verified_{lang_code}", f"Sangraha Verified ({lang_code})", cat_key, target, lambda lc=lang_code: load_dataset("ai4bharat/sangraha", data_dir=f"verified/{lc}", split="train", streaming=True), lambda s, lc=lang_code, isoc=iso: indic_processor_for_lang(s, lc, isoc, "indic_mixed_verified"))
+                
+                for lang_code, iso in indic_langs.items():
+                    if category_chars[cat_key] < target:
+                        run_source_stream(f"sangraha_unverified_{lang_code}", f"Sangraha Unverified ({lang_code})", cat_key, target, lambda lc=lang_code: load_dataset("ai4bharat/sangraha", data_dir=f"unverified/{lc}", split="train", streaming=True), lambda s, lc=lang_code, isoc=iso: indic_processor_for_lang(s, lc, isoc, "indic_mixed_unverified"))
 
         raw_writer.close()
         train_raw_writer.close()
