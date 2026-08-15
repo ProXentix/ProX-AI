@@ -165,6 +165,24 @@ DATASET_REGISTRY: List[Dict[str, Any]] = [
         "license": "Academic / Public News"
     },
     {
+        "dataset_name": "CodeFeedback Filtered Instruction",
+        "dataset_id": "m-a-p/CodeFeedback-Filtered-Instruction",
+        "subset": "default",
+        "category": "technical_documentation",
+        "auth_required": False,
+        "fallback": "None Required",
+        "license": "MIT"
+    },
+    {
+        "dataset_name": "Stack Exchange Preferences",
+        "dataset_id": "HuggingFaceH4/stack-exchange-preferences",
+        "subset": "default",
+        "category": "technical_documentation",
+        "auth_required": False,
+        "fallback": "None Required",
+        "license": "CC-BY-SA 4.0"
+    },
+    {
         "dataset_name": "OpenWebMath",
         "dataset_id": "open-web-math/open-web-math",
         "subset": "default",

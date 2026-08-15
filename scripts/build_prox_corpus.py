@@ -708,6 +708,38 @@ def build_prox_corpus_pipeline(
                             })
                     run_source_stream("AGNews", "AGNews", cat_key, target, lambda: load_dataset("fancyzhx/ag_news", split="train", streaming=True), ag_processor)
 
+                if category_chars[cat_key] < target:
+                    def cf_processor(sample):
+                        query = sample.get("query", "").strip()
+                        answer = sample.get("answer", "").strip()
+                        if len(query) > 20 and len(answer) > 50:
+                            full_doc = f"# Technical Explanation\n\n## Query\n{query}\n\n## Solution\n{answer}"
+                            process_and_write_sample({
+                                "text": full_doc, "category": cat_key, "language": "en", "source": "m-a-p/CodeFeedback-Filtered-Instruction",
+                                "dataset": "CodeFeedback Filtered Instruction", "license": "MIT",
+                                "source_url": "https://huggingface.co/datasets/m-a-p/CodeFeedback-Filtered-Instruction", "source_id": f"codefeedback_{category_docs.get(cat_key, 0)}",
+                                "quality": "code_explanation", "sha256": compute_sha256(full_doc)
+                            })
+                    run_source_stream("CodeFeedback Filtered Instruction", "CodeFeedback Filtered Instruction", cat_key, target, lambda: load_dataset("m-a-p/CodeFeedback-Filtered-Instruction", split="train", streaming=True), cf_processor)
+
+                if category_chars[cat_key] < target:
+                    def se_processor(sample):
+                        question = sample.get("question", "").strip()
+                        answers = sample.get("answers", [])
+                        if isinstance(answers, list) and len(answers) > 0:
+                            ans_text = answers[0].get("text", "") if isinstance(answers[0], dict) else str(answers[0])
+                        else:
+                            ans_text = ""
+                        if len(question) > 20 and len(ans_text) > 50:
+                            full_doc = f"# Stack Exchange Discussion\n\n## Question\n{question}\n\n## Answer\n{ans_text.strip()}"
+                            process_and_write_sample({
+                                "text": full_doc, "category": cat_key, "language": "en", "source": "HuggingFaceH4/stack-exchange-preferences",
+                                "dataset": "Stack Exchange Preferences", "license": "CC-BY-SA 4.0",
+                                "source_url": "https://huggingface.co/datasets/HuggingFaceH4/stack-exchange-preferences", "source_id": f"stackexchange_{category_docs.get(cat_key, 0)}",
+                                "quality": "technical_qa", "sha256": compute_sha256(full_doc)
+                            })
+                    run_source_stream("Stack Exchange Preferences", "Stack Exchange Preferences", cat_key, target, lambda: load_dataset("HuggingFaceH4/stack-exchange-preferences", split="train", streaming=True), se_processor)
+
         if single_category in [None, "mathematics_reasoning"]:
             cat_key = "mathematics_reasoning"
             target = raw_category_targets[cat_key]
@@ -793,6 +825,16 @@ def build_prox_corpus_pipeline(
         val_raw_writer.close()
         test_raw_writer.close()
         dedup_writer.close()
+
+        prog_cat = "programming_languages"
+        if prog_cat in category_chars and category_chars[prog_cat] >= raw_category_targets.get(prog_cat, 0):
+            python_chars = language_chars.get("python", 0) + language_chars.get("py", 0)
+            other_chars = sum(language_chars.get(lang, 0) for lang in ["c", "cpp", "js", "javascript", "ts", "typescript", "rust", "go", "java"])
+            if python_chars > 0 and other_chars == 0:
+                print(f"\n[WARNING] Programming category target reached, but severe language imbalance detected:", flush=True)
+                print(f"          Python chars: {python_chars:,}", flush=True)
+                print(f"          Other (C/C++/JS/TS/Rust/Go/Java) chars: {other_chars:,}", flush=True)
+                print(f"          The corpus is highly skewed towards Python.", flush=True)
 
         total_chars = sum(category_chars.values())
         total_docs = sum(category_docs.values())
